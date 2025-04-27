@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>20 שאלות לילדים</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>20 שאלות לילדים</h1>
+            <button id="start-btn" class="btn">התחל משחק</button>
+        </header>
+        
+        <div id="game-container" class="hidden">
+            <div id="progress-container">
+                <div id="progress-bar">
+                    <div id="progress-fill"></div>
+                </div>
+                <div id="question-counter">שאלה <span id="current-question">1</span> מתוך 20</div>
+            </div>
+            
+            <div id="question-container">
+                <h2 id="question-text"></h2>
+                
+                <div id="hint-container" class="hidden">
+                    <p id="hint-text"></p>
+                </div>
+                
+                <div id="buttons-container">
+                    <button id="show-hint-btn" class="btn hint-btn">הצג רמז</button>
+                    <button id="show-answer-btn" class="btn">הצג תשובה</button>
+                </div>
+                
+                <div id="answer-container" class="hidden">
+                    <p id="answer-text"></p>
+                    <div id="feedback-buttons">
+                        <button id="knew-btn" class="feedback-btn knew">ידעתי!</button>
+                        <button id="didnt-know-btn" class="feedback-btn didnt-know">לא ידעתי</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="results-container" class="hidden">
+            <h2>סיימת!</h2>
+            <p>הציון שלך: <span id="score">0</span> מתוך 20</p>
+            <div id="score-message"></div>
+            <button id="restart-btn" class="btn">שחק שוב</button>
+        </div>
+    </div>
+    
+    <script src="questions.js"></script>
+    <script src="script.js"></script>
+</body>
+</html> 
