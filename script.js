@@ -4,6 +4,7 @@ let currentQuestionIndex = 0;
 let score = 0;
 let usedQuestionSets = [];
 const MAX_HISTORY = 10; // Track last 10 games to prevent repeats
+const QUESTIONS_PER_GAME = 12; // Number of questions per game
 
 // DOM Elements
 const startBtn = document.getElementById('start-btn');
@@ -53,7 +54,7 @@ function startGame() {
     
     // Get new set of questions without repeats from recent games
     loadQuestionHistory();
-    currentQuestions = getUniqueQuestions(20);
+    currentQuestions = getUniqueQuestions(QUESTIONS_PER_GAME);
     
     // Add current question IDs to history
     const currentQuestionIds = currentQuestions.map(q => q.question);
@@ -79,7 +80,7 @@ function startGame() {
 }
 
 // Get questions that haven't been used in recent games
-function getUniqueQuestions(count = 20) {
+function getUniqueQuestions(count = QUESTIONS_PER_GAME) {
     // Create a flattened array of all recently used question texts
     const recentlyUsedQuestions = usedQuestionSets.flat();
     
@@ -114,7 +115,7 @@ function showQuestion() {
     
     // Update progress
     currentQuestionElement.textContent = currentQuestionIndex + 1;
-    const progressPercentage = ((currentQuestionIndex) / 20) * 100;
+    const progressPercentage = ((currentQuestionIndex) / QUESTIONS_PER_GAME) * 100;
     progressFill.style.width = `${progressPercentage}%`;
 }
 
@@ -160,13 +161,13 @@ function endGame() {
     scoreElement.textContent = score;
     
     // Provide feedback based on score
-    if (score >= 18) {
+    if (score >= 11) {
         scoreMessage.textContent = "מצוין! אתה ממש חכם!";
-    } else if (score >= 15) {
+    } else if (score >= 9) {
         scoreMessage.textContent = "כל הכבוד! אתה יודע הרבה דברים!";
-    } else if (score >= 10) {
+    } else if (score >= 6) {
         scoreMessage.textContent = "טוב מאוד! למדת דברים חדשים?";
-    } else if (score >= 5) {
+    } else if (score >= 3) {
         scoreMessage.textContent = "נחמד! עכשיו אתה יודע יותר!";
     } else {
         scoreMessage.textContent = "זה בסדר, בפעם הבאה תצליח יותר!";
