@@ -6,6 +6,17 @@ let usedQuestionSets = [];
 const MAX_HISTORY = 10; // Track last 10 games to prevent repeats
 const QUESTIONS_PER_GAME = 12; // Number of questions per game
 
+// Sound effects
+const clickSound = new Audio('audio/click.mp3');
+const fanfareSound = new Audio('audio/fanfare.mp3');
+const correctSound = new Audio('audio/correct.mp3');
+
+// Play sound function
+function playSound(sound) {
+    sound.currentTime = 0;
+    sound.play();
+}
+
 // DOM Elements
 const startBtn = document.getElementById('start-btn');
 const gameContainer = document.getElementById('game-container');
@@ -39,12 +50,30 @@ function saveQuestionHistory() {
 }
 
 // Event Listeners
-startBtn.addEventListener('click', startGame);
-showHintBtn.addEventListener('click', showHint);
-showAnswerBtn.addEventListener('click', showAnswer);
-knewBtn.addEventListener('click', () => handleAnswer(true));
-didntKnowBtn.addEventListener('click', () => handleAnswer(false));
-restartBtn.addEventListener('click', startGame);
+startBtn.addEventListener('click', () => {
+    playSound(clickSound);
+    startGame();
+});
+showHintBtn.addEventListener('click', () => {
+    playSound(clickSound);
+    showHint();
+});
+showAnswerBtn.addEventListener('click', () => {
+    playSound(clickSound);
+    showAnswer();
+});
+knewBtn.addEventListener('click', () => {
+    playSound(correctSound);
+    handleAnswer(true);
+});
+didntKnowBtn.addEventListener('click', () => {
+    playSound(clickSound);
+    handleAnswer(false);
+});
+restartBtn.addEventListener('click', () => {
+    playSound(clickSound);
+    startGame();
+});
 
 // Initialize the game
 function startGame() {
@@ -198,6 +227,9 @@ function handleAnswer(knew) {
 function endGame() {
     gameContainer.classList.add('hidden');
     resultsContainer.classList.remove('hidden');
+    
+    // Play fanfare sound
+    playSound(fanfareSound);
     
     // Update score
     scoreElement.textContent = score;
