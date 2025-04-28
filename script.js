@@ -7,7 +7,7 @@ const MAX_HISTORY = 10; // Track last 10 games to prevent repeats
 const QUESTIONS_PER_GAME = 12; // Number of questions per game
 
 // Sound effects
-const clickSound = new Audio('audio/click.mp3');
+const clickSound = new Audio('audio/correct.mp3');
 const fanfareSound = new Audio('audio/fanfare.mp3');
 const correctSound = new Audio('audio/correct.mp3');
 
