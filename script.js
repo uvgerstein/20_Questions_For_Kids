@@ -105,11 +105,25 @@ function getUniqueQuestions(count = QUESTIONS_PER_GAME) {
 // Display the current question
 function showQuestion() {
     const currentQuestion = currentQuestions[currentQuestionIndex];
-    questionText.textContent = currentQuestion.question;
+    
+    const questionContainer = document.getElementById('question-container');
+    
+    // Animation effect
+    questionContainer.style.opacity = "0";
+    questionContainer.style.transform = "translateY(20px)";
+    
+    setTimeout(() => {
+        questionText.textContent = currentQuestion.question;
+        
+        // Show with animation
+        questionContainer.style.opacity = "1";
+        questionContainer.style.transform = "translateY(0)";
+        questionContainer.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+    }, 100);
     
     // Reset containers
-    answerContainer.classList.add('hidden');
-    hintContainer.classList.add('hidden');
+    document.getElementById('answer-container').classList.add('hidden');
+    document.getElementById('hint-container').classList.add('hidden');
     showAnswerBtn.classList.remove('hidden');
     showHintBtn.classList.remove('hidden');
     
@@ -122,18 +136,46 @@ function showQuestion() {
 // Show hint for the current question
 function showHint() {
     const currentQuestion = currentQuestions[currentQuestionIndex];
-    hintText.textContent = currentQuestion.hint;
-    hintContainer.classList.remove('hidden');
-    showHintBtn.classList.add('hidden');
+    
+    if (currentQuestion.hint) {
+        hintText.textContent = currentQuestion.hint;
+        
+        // Set initial state for animation
+        hintContainer.style.opacity = "0";
+        hintContainer.style.transform = "translateY(20px)";
+        
+        // Show element and animate
+        hintContainer.classList.remove('hidden');
+        showHintBtn.classList.add('hidden');
+        
+        setTimeout(() => {
+            hintContainer.style.opacity = "1";
+            hintContainer.style.transform = "translateY(0)";
+            hintContainer.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+        }, 10);
+    }
 }
 
 // Reveal the answer
 function showAnswer() {
     const currentQuestion = currentQuestions[currentQuestionIndex];
+    
     answerText.textContent = currentQuestion.answer;
+    
+    // Set initial state for animation
+    answerContainer.style.opacity = "0";
+    answerContainer.style.transform = "translateY(20px)";
+    
+    // Show element and animate
     answerContainer.classList.remove('hidden');
     showAnswerBtn.classList.add('hidden');
     showHintBtn.classList.add('hidden');
+    
+    setTimeout(() => {
+        answerContainer.style.opacity = "1";
+        answerContainer.style.transform = "translateY(0)";
+        answerContainer.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+    }, 10);
 }
 
 // Handle user feedback about whether they knew the answer
