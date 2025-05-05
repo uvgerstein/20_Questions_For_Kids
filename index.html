@@ -3,61 +3,81 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>20 שאלות לילדים</title>
+    <title>12 שאלות לילדים!</title>
     <link rel="stylesheet" href="styles.css">
-    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🎮 שאלות לילדים 🎮</h1>
-            <p class="subtitle">שאלות מעניינות לילדים סקרנים!</p>
-            <button id="start-btn" class="btn">התחל משחק</button>
-        </header>
-        
+        <h1>12 שאלות לילדים!</h1>
+
+        <!-- User Display Area -->
+        <div id="current-user-display" class="hidden">
+            <img id="current-user-avatar" src="" alt="תמונת פרופיל" width="30" height="30">
+            <span id="current-user-name"></span>
+            <!-- Avatar Action Menu (Initially Hidden) -->
+            <div id="avatar-menu" class="hidden">
+                <button id="save-progress-btn" class="avatar-menu-btn">שמור התקדמות</button>
+                <button id="start-over-btn" class="avatar-menu-btn">התחל מחדש</button>
+                <button id="quit-menu-btn" class="avatar-menu-btn">צא</button> 
+            </div>
+        </div>
+
+        <!-- User Selection Area -->
+        <div id="user-selection-container">
+            <h2>בחר שחקן!</h2>
+            <div id="existing-users">
+                <!-- Existing users will be populated here -->
+            </div>
+            <h3>או צור שחקן חדש:</h3>
+            <input type="text" id="new-user-name" placeholder="הכנס את שמך">
+            <div id="avatar-selection">
+                <h4>בחר תמונה:</h4>
+                <!-- Avatars will be populated here -->
+            </div>
+            <button id="confirm-user-btn" class="btn">בוא נשחק!</button>
+        </div>
+
+        <!-- Original Start Button (Now hidden initially, user selection triggers game start) -->
+        <button id="start-btn" class="btn hidden">התחל משחק</button>
+
+        <!-- Game Area -->
         <div id="game-container" class="hidden">
             <div id="progress-container">
+                שאלה <span id="current-question">1</span> / <span id="total-questions">12</span>
                 <div id="progress-bar">
                     <div id="progress-fill"></div>
                 </div>
-                <div id="question-counter">שאלה <span id="current-question">1</span> מתוך 12</div>
             </div>
-            
             <div id="question-container">
-                <h2 id="question-text"></h2>
-                
-                <div id="hint-container" class="hidden">
-                    <p id="hint-text"></p>
-                </div>
-                
-                <div id="buttons-container">
-                    <button id="show-hint-btn" class="btn hint-btn">הצג רמז</button>
-                    <button id="show-answer-btn" class="btn">הצג תשובה</button>
-                </div>
-                
-                <div id="answer-container" class="hidden">
-                    <p id="answer-text"></p>
-                    <div id="feedback-buttons">
-                        <button id="knew-btn" class="feedback-btn knew">ידעתי!</button>
-                        <button id="didnt-know-btn" class="feedback-btn didnt-know">לא ידעתי</button>
-                    </div>
+                <p id="question-text">השאלה תופיע כאן...</p>
+            </div>
+            <div class="controls">
+                <button id="show-hint-btn" class="btn">הצג רמז</button>
+                <button id="show-answer-btn" class="btn">הצג תשובה</button>
+            </div>
+            <div id="hint-container" class="hidden">
+                <p><strong>רמז:</strong> <span id="hint-text"></span></p>
+            </div>
+            <div id="answer-container" class="hidden">
+                <p><strong>תשובה:</strong> <span id="answer-text"></span></p>
+                <div class="knew-it-controls">
+                    <button id="knew-btn" class="btn correct">ידעתי!</button>
+                    <button id="didnt-know-btn" class="btn incorrect">לא ידעתי</button>
                 </div>
             </div>
         </div>
-        
+
+        <!-- Results Area -->
         <div id="results-container" class="hidden">
-            <h2>סיימת!</h2>
-            <p>הציון שלך: <span id="score">0</span> מתוך 12</p>
-            <div id="score-message"></div>
+            <h2>המשחק נגמר!</h2>
+            <p id="score-message">הציון שלך: <span id="score">0</span>/12</p>
             <button id="restart-btn" class="btn">שחק שוב</button>
         </div>
-        
-        <div id="creator">
-            נוצר ע"י <span>יובי</span>
-            <div class="year">© 2025</div>
-        </div>
     </div>
-    
+
     <script src="questions.js"></script>
     <script src="script.js"></script>
 </body>

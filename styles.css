@@ -322,4 +322,140 @@ button:hover {
         flex-direction: column;
         gap: 10px;
     }
+}
+
+/* User Selection Styles */
+#user-selection-container {
+    background-color: #f0f8ff; /* Light blue background */
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#user-selection-container h2, 
+#user-selection-container h3 {
+    color: #333;
+    margin-bottom: 15px;
+}
+
+#user-selection-container input[type="text"] {
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    width: 80%;
+    max-width: 300px;
+}
+
+#avatar-selection {
+    margin-top: 15px;
+    margin-bottom: 20px;
+}
+
+#avatar-selection h4 {
+    margin-bottom: 10px;
+    color: #555;
+}
+
+.avatar-choice {
+    display: inline-block;
+    margin: 5px;
+    padding: 5px;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.avatar-choice img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+}
+
+.avatar-choice.selected {
+    border-color: #4CAF50; /* Highlight selected avatar */
+}
+
+/* Current User Display */
+#current-user-display {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    margin-bottom: 15px;
+    padding: 5px;
+    background-color: #e7f4ff;
+    border-radius: 20px;
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    cursor: pointer;
+    z-index: 20;
+}
+
+#current-user-display img {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+#current-user-display span {
+    font-weight: bold;
+    color: #333;
+}
+
+/* Avatar Action Menu */
+#avatar-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background-color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+    padding: 5px 0;
+    z-index: 10;
+    min-width: 120px;
+    margin-top: 5px;
+}
+
+.avatar-menu-btn {
+    display: block;
+    background: none;
+    border: none;
+    padding: 8px 15px;
+    width: 100%;
+    text-align: right;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.avatar-menu-btn:hover {
+    background-color: #f0f0f0;
+}
+
+/* Utility class for hidden elements */
+.hidden {
+    display: none !important;
+}
+
+/* Initial State: Show user selection, hide game */
+body #game-container,
+body #results-container,
+body #current-user-display {
+    /* Initially hidden via HTML class, CSS reinforces if needed */
+}
+
+body #user-selection-container {
+    display: block;
+}
+
+/* Remove Quit Button Styles */
+/* .btn.quit-btn { ... } */
+
+#progress-container {
+    /* Remove position: relative and padding-left */
+    margin-bottom: 1.5rem;
 } 
