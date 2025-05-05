@@ -16,6 +16,7 @@ const avatars = [ // Updated avatar paths
     './avatars/Mick.png',
 ];
 let selectedAvatar = null;
+let isLoading = false; // Flag to prevent issues during async confirm
 
 // Sound effects
 const clickSound = new Audio('audio/correct.mp3');
@@ -152,15 +153,17 @@ function startGame() {
     saveQuestionHistory();
     
     // Reset UI
+    userSelectionContainer.classList.add('hidden'); // Hide user selection
     resultsContainer.classList.add('hidden');
-    gameContainer.classList.remove('hidden');
+    gameContainer.classList.remove('hidden'); // Show game
+    currentUserDisplay.classList.remove('hidden'); // Ensure user display is shown
     answerContainer.classList.add('hidden');
     hintContainer.classList.add('hidden');
-    avatarMenu.classList.add('hidden'); // Ensure menu is hidden at game start
+    avatarMenu.classList.add('hidden'); 
     
     // Update total questions display
-    totalQuestionsElement.textContent = QUESTIONS_PER_GAME;
-    
+    totalQuestionsElement.textContent = currentQuestions.length > 0 ? currentQuestions.length : QUESTIONS_PER_GAME;
+
     // Show the first question
     showQuestion();
 }
@@ -284,6 +287,7 @@ function handleAnswer(knew) {
 function endGame() {
     gameContainer.classList.add('hidden');
     resultsContainer.classList.remove('hidden');
+    avatarMenu.classList.add('hidden');
     
     // Play fanfare sound
     playSound(fanfareSound);
@@ -314,7 +318,12 @@ function endGame() {
     }
     scoreMessage.textContent = `${messagePrefix} ${feedbackMessage}`; // Combine personalized prefix and feedback
     
-    avatarMenu.classList.add('hidden'); // Ensure menu is hidden at game end
+    // Clear saved progress for this user upon completion
+    if (currentUser) {
+        const storageKey = `userProgress_${currentUser.name}`;
+        localStorage.removeItem(storageKey);
+        console.log(`Cleared saved progress for ${currentUser.name} upon game completion.`);
+    }
 }
 
 // Populate avatar choices in the UI
@@ -341,37 +350,123 @@ function populateAvatars() {
     });
 }
 
-// Handle user confirmation/creation
-function handleUserConfirmation() {
+// --- NEW Load and Resume Game Logic ---
+function checkForSavedGame(userName) {
+    const storageKey = `userProgress_${userName}`;
+    try {
+        const savedDataString = localStorage.getItem(storageKey);
+        if (savedDataString) {
+            const savedData = JSON.parse(savedDataString);
+            // Basic validation: check if essential properties exist
+            if (savedData && typeof savedData.currentQuestionIndex === 'number' && savedData.currentQuestions) {
+                console.log(`Found saved game for ${userName}:`, savedData);
+                return { exists: true, data: savedData, key: storageKey };
+            } else {
+                console.warn(`Invalid saved data found for ${userName}, removing.`);
+                localStorage.removeItem(storageKey); // Clean up invalid data
+                return { exists: false };
+            }
+        } 
+    } catch (error) {
+        console.error("Error reading or parsing saved game:", error);
+        // Optional: Clean up potentially corrupted data
+        // localStorage.removeItem(storageKey);
+    }
+    return { exists: false };
+}
+
+function resumeGame(savedData) {
+    console.log("Resuming game...");
+    // Restore game state
+    score = savedData.score || 0;
+    currentQuestionIndex = savedData.currentQuestionIndex || 0;
+    currentQuestions = savedData.currentQuestions || [];
+    // Restore used questions history (if saved)
+    if (savedData.usedQuestionSets) {
+        usedQuestionSets = savedData.usedQuestionSets;
+    }
+    
+    // Ensure currentQuestions is not empty if index is > 0
+    if (currentQuestions.length === 0 && currentQuestionIndex > 0) {
+        console.error("Cannot resume game: Saved question list is empty.");
+        alert("שגיאה בטעינת המשחק השמור. מתחיל משחק חדש."); // Error loading saved game. Starting new game.
+        startGame(); // Fallback to a new game
+        return;
+    }
+
+    // Update UI elements
+    userSelectionContainer.classList.add('hidden');
+    resultsContainer.classList.add('hidden');
+    gameContainer.classList.remove('hidden');
+    currentUserDisplay.classList.remove('hidden');
+    avatarMenu.classList.add('hidden');
+    
+    // Update user display (already set in handleUserConfirmation)
+    // currentUserAvatar.src = currentUser.avatar;
+    // currentUserName.textContent = currentUser.name;
+
+    // Update total questions display
+    totalQuestionsElement.textContent = currentQuestions.length > 0 ? currentQuestions.length : QUESTIONS_PER_GAME;
+
+    // Show the question user was on
+    showQuestion(); 
+}
+
+// --- MODIFIED Handle User Confirmation ---
+async function handleUserConfirmation() { // Make async to handle confirm potentially
+    if (isLoading) return; // Prevent double execution if clicking quickly
+    isLoading = true;
+
     const userName = newUserNameInput.value.trim();
 
     if (!userName) {
-        alert('אנא הכנס שם!'); // Translate alert
+        alert('אנא הכנס שם!');
+        isLoading = false;
         return;
     }
     if (!selectedAvatar) {
-        alert('אנא בחר תמונה!'); // Translate alert
+        alert('אנא בחר תמונה!');
+        isLoading = false;
         return;
     }
 
-    // Simple user creation (no persistence yet)
+    // Set potential current user *before* checking for save
     currentUser = {
         name: userName,
         avatar: selectedAvatar
     };
-    users.push(currentUser);
 
-    // Update current user display
+    // Update display immediately (looks better)
     currentUserAvatar.src = currentUser.avatar;
     currentUserName.textContent = currentUser.name;
-    currentUserDisplay.classList.remove('hidden');
 
-    // Hide user selection and show game
-    userSelectionContainer.classList.add('hidden');
-    gameContainer.classList.remove('hidden');
+    // Check for existing saved game
+    const savedGameCheck = checkForSavedGame(userName);
 
-    playSound(clickSound);
-    startGame();
+    if (savedGameCheck.exists) {
+        // Use confirm to ask the user
+        // Note: confirm() is synchronous and blocks execution
+        const wantsToResume = confirm("נמצא משחק שמור. האם תרצה להמשיך?"); 
+
+        if (wantsToResume) {
+            // Resume game
+            resumeGame(savedGameCheck.data);
+        } else {
+            // User chose not to resume, delete old save and start new game
+            localStorage.removeItem(savedGameCheck.key);
+            console.log("User declined resume. Starting new game.");
+            // Hide user selection / show game elements is done within startGame
+            playSound(clickSound);
+            startGame(); 
+        }
+    } else {
+        // No saved game found, start new game
+        // Hide user selection / show game elements is done within startGame
+        playSound(clickSound);
+        startGame();
+    }
+    
+    isLoading = false; // Reset flag
 }
 
 // Check if the DOM is loaded and initialize the game

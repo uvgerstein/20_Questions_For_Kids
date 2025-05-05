@@ -398,7 +398,7 @@ button:hover {
     width: 45px;
     height: 45px;
     border-radius: 50%;
-    margin-right: 8px;
+    margin-left: 8px;
 }
 
 #current-user-display span {
