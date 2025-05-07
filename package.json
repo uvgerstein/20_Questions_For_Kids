@@ -1,0 +1,22 @@
+{
+  "name": "20_Questions_For_Kids",
+  "version": "1.0.0",
+  "description": "משחק שאלות טריוויה לילדים עד גיל 8 בעברית.",
+  "main": "questions.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/uvgerstein/20_Questions_For_Kids/issues"
+  },
+  "homepage": "https://github.com/uvgerstein/20_Questions_For_Kids#readme",
+  "dependencies": {
+    "node-fetch": "^3.3.2"
+  }
+}
