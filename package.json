@@ -17,6 +17,6 @@
   },
   "homepage": "https://github.com/uvgerstein/20_Questions_For_Kids#readme",
   "dependencies": {
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^2.6.7"
   }
 }
