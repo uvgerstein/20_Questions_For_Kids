@@ -131,63 +131,94 @@ quitMenuBtn.addEventListener('click', (e) => {
 });
 
 // Initialize the game
-function startGame() {
-    // Reset game state
+async function startGame() {
     currentQuestionIndex = 0;
     score = 0;
     
-    // Get new set of questions without repeats from recent games
     loadQuestionHistory();
-    currentQuestions = getUniqueQuestions(QUESTIONS_PER_GAME);
     
-    // Add current question IDs to history
-    const currentQuestionIds = currentQuestions.map(q => q.question);
-    usedQuestionSets.push(currentQuestionIds);
+    let fetchedQuestions;
+    try {
+        fetchedQuestions = await fetchQuestionsFromGeminiAPI(QUESTIONS_PER_GAME);
+    } catch (apiError) {
+        // This catch block might be redundant if fetchQuestionsFromGeminiAPI handles its own errors and returns a fallback.
+        // However, it can catch errors if fetchQuestionsFromGeminiAPI itself throws an unhandled exception before returning.
+        console.error("Critical error calling fetchQuestionsFromGeminiAPI:", apiError);
+        fetchedQuestions = [ 
+            { question: "API Call Error: What planet is known for its rings?", answer: "Saturn", hint: "It\'s a gas giant." }
+        ];
+    }
+
+    if (!fetchedQuestions || fetchedQuestions.length === 0) {
+        console.warn("API returned no questions or an error occurred. Using fallback questions for game logic.");
+        fetchedQuestions = [ 
+            { question: "What do bees make?", answer: "Honey", hint: "It\'s sweet." },
+            { question: "How many days are in a week?", answer: "Seven", hint: "Starts with S." }
+        ];
+    }
     
-    // Keep only the most recent MAX_HISTORY game histories
+    currentQuestions = getUniqueQuestions(fetchedQuestions, QUESTIONS_PER_GAME); 
+
+    if (!currentQuestions || currentQuestions.length === 0) {
+         console.error("After filtering, no questions are available. This might happen if all API questions were recently used or API failed critically. Providing emergency fallback.");
+         alert("Could not load unique questions for the game. Please try restarting.");
+         currentQuestions = [{ question: "Emergency Fallback: What is 1+1?", answer: "2", hint: "A basic sum."}];
+    }
+    
+    const currentQuestionTexts = currentQuestions.map(q => q.question);
+    usedQuestionSets.push(currentQuestionTexts);
+    
     if (usedQuestionSets.length > MAX_HISTORY) {
         usedQuestionSets = usedQuestionSets.slice(-MAX_HISTORY);
     }
-    
-    // Save updated history
     saveQuestionHistory();
     
-    // Reset UI
-    userSelectionContainer.classList.add('hidden'); // Hide user selection
+    userSelectionContainer.classList.add('hidden');
     resultsContainer.classList.add('hidden');
-    gameContainer.classList.remove('hidden'); // Show game
-    currentUserDisplay.classList.remove('hidden'); // Ensure user display is shown
+    gameContainer.classList.remove('hidden');
+    currentUserDisplay.classList.remove('hidden');
     answerContainer.classList.add('hidden');
     hintContainer.classList.add('hidden');
     avatarMenu.classList.add('hidden'); 
     
-    // Update total questions display
     totalQuestionsElement.textContent = currentQuestions.length > 0 ? currentQuestions.length : QUESTIONS_PER_GAME;
 
-    // Show the first question
-    showQuestion();
+    if (currentQuestions.length > 0) {
+        showQuestion();
+    } else {
+        // Handle the case where no questions could be loaded at all.
+        questionText.textContent = "No questions available to display. Please try again later.";
+        // Disable game buttons or show an appropriate message
+        console.error("No questions loaded to start the game.");
+    }
 }
 
-// Get questions that haven't been used in recent games
-function getUniqueQuestions(count = QUESTIONS_PER_GAME) {
-    // Create a flattened array of all recently used question texts
-    const recentlyUsedQuestions = usedQuestionSets.flat();
+// Modified getUniqueQuestions to work with API-fetched questions
+function getUniqueQuestions(questionsFromApi, count = QUESTIONS_PER_GAME) {
+    if (!questionsFromApi || questionsFromApi.length === 0) {
+        console.warn("getUniqueQuestions called with an empty or null list of questions.");
+        return [];
+    }
+
+    const recentlyUsedQuestionTexts = usedQuestionSets.flat();
+    let availableQuestions = questionsFromApi.filter(q => q && q.question && !recentlyUsedQuestionTexts.includes(q.question));
     
-    // Create a copy of all questions and filter out recently used ones if possible
-    let availableQuestions = [...allQuestions];
-    
-    // If we have enough questions to avoid repeats
-    if (allQuestions.length - recentlyUsedQuestions.length >= count) {
-        availableQuestions = allQuestions.filter(q => !recentlyUsedQuestions.includes(q.question));
+    if (availableQuestions.length < count && questionsFromApi.length > 0) {
+        // If filtering made the list too short, but the original API list had items
+        console.warn(`Only ${availableQuestions.length} unique (not recently used) questions found from API set of ${questionsFromApi.length}. If this is less than ${count}, some questions might be repeated from recent global history or API provided fewer unique ones than desired after filtering.`);
+        // If not enough unique questions, and we need to fill up to 'count', we might reuse from the original API set, preferring those not in 'recentlyUsedQuestionTexts'
+        if (availableQuestions.length === 0 && questionsFromApi.length > 0) {
+             console.warn("All questions from the API batch were in usedQuestionSets. Re-using directly from API batch for this game.");
+             availableQuestions = [...questionsFromApi]; // Use the API questions, will be shuffled next
+        }
     }
     
-    // Shuffle the available questions
+    // Shuffle the (filtered or fallback) available questions
     for (let i = availableQuestions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [availableQuestions[i], availableQuestions[j]] = [availableQuestions[j], availableQuestions[i]];
     }
     
-    // Return the first 'count' questions, or all if we don't have enough
     return availableQuestions.slice(0, Math.min(count, availableQuestions.length));
 }
 
@@ -413,8 +444,8 @@ function resumeGame(savedData) {
 }
 
 // --- MODIFIED Handle User Confirmation ---
-async function handleUserConfirmation() { // Make async to handle confirm potentially
-    if (isLoading) return; // Prevent double execution if clicking quickly
+async function handleUserConfirmation() { 
+    if (isLoading) return; 
     isLoading = true;
 
     const userName = newUserNameInput.value.trim();
@@ -430,43 +461,33 @@ async function handleUserConfirmation() { // Make async to handle confirm potent
         return;
     }
 
-    // Set potential current user *before* checking for save
     currentUser = {
         name: userName,
         avatar: selectedAvatar
     };
 
-    // Update display immediately (looks better)
     currentUserAvatar.src = currentUser.avatar;
     currentUserName.textContent = currentUser.name;
 
-    // Check for existing saved game
     const savedGameCheck = checkForSavedGame(userName);
 
     if (savedGameCheck.exists) {
-        // Use confirm to ask the user
-        // Note: confirm() is synchronous and blocks execution
         const wantsToResume = confirm("נמצא משחק שמור. האם תרצה להמשיך?"); 
 
         if (wantsToResume) {
-            // Resume game
             resumeGame(savedGameCheck.data);
         } else {
-            // User chose not to resume, delete old save and start new game
             localStorage.removeItem(savedGameCheck.key);
             console.log("User declined resume. Starting new game.");
-            // Hide user selection / show game elements is done within startGame
             playSound(clickSound);
-            startGame(); 
+            await startGame(); 
         }
     } else {
-        // No saved game found, start new game
-        // Hide user selection / show game elements is done within startGame
         playSound(clickSound);
-        startGame();
+        await startGame(); 
     }
     
-    isLoading = false; // Reset flag
+    isLoading = false;
 }
 
 // Check if the DOM is loaded and initialize the game
@@ -525,4 +546,49 @@ function quitGame() {
     // Maybe clear the name input? 
     // newUserNameInput.value = ''; 
     currentUser = null; // Reset current user
+}
+
+// NEW: Function to fetch questions from your Netlify Function
+async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME) {
+    // The URL now points to your Netlify Function.
+    // We pass the desired count as a query parameter.
+    const netlifyFunctionUrl = `/.netlify/functions/get-questions?count=${count}`;
+
+    try {
+        const response = await fetch(netlifyFunctionUrl);
+
+        if (!response.ok) {
+            // Try to parse error response from our Netlify function, which should be JSON
+            let errorData;
+            try {
+                errorData = await response.json();
+            } catch (e) {
+                // If error response isn't JSON, use text
+                errorData = { error: await response.text() };
+            }
+            console.error('Netlify function request failed:', response.status, errorData);
+            throw new Error(`Failed to fetch questions: ${errorData.error || response.statusText}`);
+        }
+
+        // The Netlify function's body is expected to be a JSON string
+        // containing the array of questions.
+        const questionsJsonString = await response.text();
+        const questions = JSON.parse(questionsJsonString);
+
+        if (!Array.isArray(questions) || !questions.every(q => q.question && q.answer)) {
+            console.error("Parsed questions from Netlify function are not in the expected format:", questions);
+            throw new Error("Formatted questions from server are invalid.");
+        }
+        // The Netlify function should already slice to count, but we can be defensive
+        return questions.slice(0, count);
+
+    } catch (error) {
+        console.error('Error fetching questions from Netlify function:', error);
+        alert('Could not load questions. Using sample questions. Error: ' + error.message);
+        // Fallback to default questions
+        return [
+            { question: "Fallback: What is the capital of France?", answer: "Paris", hint: "Has a famous tower." },
+            { question: "Fallback: Which animal is the King of the Jungle?", answer: "Lion", hint: "It has a large mane." }
+        ].slice(0, count);
+    }
 } 
