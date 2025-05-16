@@ -131,10 +131,9 @@ quitMenuBtn.addEventListener('click', (e) => {
 });
 
 // Initialize the game
-async function startGame() {
+async function startGame() { 
     currentQuestionIndex = 0;
     score = 0;
-    
     loadQuestionHistory();
     
     let fetchedQuestions;
@@ -173,12 +172,17 @@ async function startGame() {
     }
     saveQuestionHistory();
     
+    // Updated UI setup with cleaner hiding/showing
     userSelectionContainer.classList.add('hidden');
     resultsContainer.classList.add('hidden');
     gameContainer.classList.remove('hidden');
     currentUserDisplay.classList.remove('hidden');
+    
+    // Make sure hint and answer containers are properly hidden
     answerContainer.classList.add('hidden');
     hintContainer.classList.add('hidden');
+    showAnswerBtn.classList.remove('hidden');
+    showHintBtn.classList.remove('hidden');
     avatarMenu.classList.add('hidden'); 
     
     totalQuestionsElement.textContent = currentQuestions.length > 0 ? currentQuestions.length : QUESTIONS_PER_GAME;
@@ -241,9 +245,9 @@ function showQuestion() {
         questionContainer.style.transition = "opacity 0.5s ease, transform 0.5s ease";
     }, 100);
     
-    // Reset containers
-    document.getElementById('answer-container').classList.add('hidden');
-    document.getElementById('hint-container').classList.add('hidden');
+    // Reset containers - modified for our new approach
+    answerContainer.classList.add('hidden');
+    hintContainer.classList.add('hidden');
     showAnswerBtn.classList.remove('hidden');
     showHintBtn.classList.remove('hidden');
     
@@ -260,19 +264,9 @@ function showHint() {
     if (currentQuestion.hint) {
         hintText.textContent = currentQuestion.hint;
         
-        // Set initial state for animation
-        hintContainer.style.opacity = "0";
-        hintContainer.style.transform = "translateY(20px)";
-        
-        // Show element and animate
+        // Simplified to use CSS transitions
         hintContainer.classList.remove('hidden');
         showHintBtn.classList.add('hidden');
-        
-        setTimeout(() => {
-            hintContainer.style.opacity = "1";
-            hintContainer.style.transform = "translateY(0)";
-            hintContainer.style.transition = "opacity 0.5s ease, transform 0.5s ease";
-        }, 10);
     }
 }
 
@@ -282,20 +276,10 @@ function showAnswer() {
     
     answerText.textContent = currentQuestion.answer;
     
-    // Set initial state for animation
-    answerContainer.style.opacity = "0";
-    answerContainer.style.transform = "translateY(20px)";
-    
-    // Show element and animate
+    // Simplified to use CSS transitions
     answerContainer.classList.remove('hidden');
     showAnswerBtn.classList.add('hidden');
     showHintBtn.classList.add('hidden');
-    
-    setTimeout(() => {
-        answerContainer.style.opacity = "1";
-        answerContainer.style.transform = "translateY(0)";
-        answerContainer.style.transition = "opacity 0.5s ease, transform 0.5s ease";
-    }, 10);
 }
 
 // Handle user feedback about whether they knew the answer
