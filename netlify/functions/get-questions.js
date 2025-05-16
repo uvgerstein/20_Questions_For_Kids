@@ -4,7 +4,7 @@
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env; // Access the API key from Netlify's environment variables
         // It's good practice to keep the main part of the API URL here too, or also in env vars
-        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=';
+        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=';
 
         // Default to QUESTIONS_PER_GAME (e.g., 12) if not specified in the request query parameters
         // We can't directly access QUESTIONS_PER_GAME from script.js here, so we use a common default or pass it.
