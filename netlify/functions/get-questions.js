@@ -8,12 +8,29 @@
         const API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
         const count = event.queryStringParameters?.count || 12;
 
-        // Updated prompt to specify Hebrew language
-        const prompt = `Generate ${count} kid-friendly trivia questions IN HEBREW LANGUAGE for children ages 6-10. 
-        For each question, provide a question, a short answer, and a one-sentence hint, ALL IN HEBREW. 
-        Format as JSON array with "question", "answer", and "hint" keys. 
-        Example (but translate to Hebrew): [{"question": "What is 2+2?", "answer": "4", "hint": "It's a small number."}]
-        Important: ALL TEXT including questions, answers and hints MUST be in Hebrew only.`;
+        // Refined prompt for age-appropriate questions for Israeli children
+        const prompt = `Generate ${count} interesting trivia questions IN HEBREW for Israeli children ages 5-8.
+
+        Topics should include:
+        - Age-appropriate science facts (space, animals, nature)
+        - Israeli geography, landmarks, and culture
+        - Fun facts about the world
+        - Basic history
+        - Sports and games popular in Israel
+        
+        AVOID overly simple questions like "what is a toothbrush?" or very basic object identification.
+        The questions should be interesting and slightly challenging but still appropriate for the age group.
+        
+        For each question, provide:
+        1. A clear question
+        2. A concise answer
+        3. A helpful hint
+        
+        Format as a JSON array with "question", "answer", and "hint" keys.
+        ALL text must be in Hebrew.
+        
+        Example format (but in Hebrew):
+        [{"question": "Which planet is known for its beautiful rings?", "answer": "Saturn", "hint": "It's the sixth planet from the sun."}]`;
 
         try {
             const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
@@ -28,7 +45,7 @@
                         }]
                     }],
                     generationConfig: {
-                        temperature: 0.7,
+                        temperature: 0.8, // Slightly higher temperature for more creativity
                         topK: 40,
                         topP: 0.95,
                         maxOutputTokens: 1024
