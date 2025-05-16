@@ -4,36 +4,55 @@
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env;
         
-        // Temporarily change to list available models
-        const baseUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
-        const fullApiUrl = `${baseUrl}?key=${GEMINI_API_KEY}`;
+        console.log("API Key available:", !!GEMINI_API_KEY); // Don't log the actual key
         
-        try {
-            console.log("Attempting to list available models...");
-            const response = await fetch(fullApiUrl);
-            
-            if (!response.ok) {
-                const errorBody = await response.text();
-                console.error('ListModels request failed:', response.status, errorBody);
-                return { 
-                    statusCode: response.status, 
-                    body: JSON.stringify({ error: "Failed to list models", details: errorBody }) 
+        // Try multiple endpoints
+        const endpoints = [
+            {
+                name: "Google AI Studio API",
+                url: `https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`
+            },
+            {
+                name: "Vertex AI",
+                url: `https://us-central1-aiplatform.googleapis.com/v1/projects/gersteinart-sizes/locations/us-central1/publishers/google/models?key=${GEMINI_API_KEY}`
+            }
+        ];
+        
+        const results = {};
+        
+        for (const endpoint of endpoints) {
+            try {
+                console.log(`Trying ${endpoint.name} endpoint...`);
+                const response = await fetch(endpoint.url);
+                const status = response.status;
+                
+                results[endpoint.name] = {
+                    status,
+                    ok: response.ok
+                };
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    console.log(`${endpoint.name} successful response:`, JSON.stringify(data).substring(0, 200) + "...");
+                    results[endpoint.name].data = "Data retrieved successfully";
+                } else {
+                    const errorText = await response.text();
+                    console.error(`${endpoint.name} error:`, status, errorText);
+                    results[endpoint.name].error = errorText;
+                }
+            } catch (error) {
+                console.error(`${endpoint.name} fetch error:`, error.message);
+                results[endpoint.name] = {
+                    error: error.message
                 };
             }
-            
-            const data = await response.json();
-            console.log("Available models:", JSON.stringify(data, null, 2));
-            
-            // Return the list for inspection
-            return {
-                statusCode: 200,
-                body: JSON.stringify({ message: "Models list retrieved", models: data })
-            };
-        } catch (error) {
-            console.error("Error listing models:", error);
-            return {
-                statusCode: 500,
-                body: JSON.stringify({ error: "Failed to retrieve models list" })
-            };
         }
+        
+        return {
+            statusCode: 200,
+            body: JSON.stringify({
+                message: "API diagnostics complete",
+                results
+            })
+        };
     };
