@@ -8,8 +8,8 @@
         const API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
         const count = event.queryStringParameters?.count || 12;
 
-        // Refined prompt for age-appropriate questions for Israeli children
-        const prompt = `Generate ${count} interesting trivia questions IN HEBREW for Israeli children ages 5-8.
+        // Enhanced prompt for high-quality, specific questions for Israeli children
+        const prompt = `Generate ${count} interesting and SPECIFIC trivia questions IN HEBREW for Israeli children ages 5-8.
 
         Topics should include:
         - Age-appropriate science facts (space, animals, nature)
@@ -18,12 +18,24 @@
         - Basic history
         - Sports and games popular in Israel
         
-        AVOID overly simple questions like "what is a toothbrush?" or very basic object identification.
-        The questions should be interesting and slightly challenging but still appropriate for the age group.
+        IMPORTANT REQUIREMENTS:
+        1. AVOID overly simple questions or ones with generic answers
+        2. ENSURE each answer is SPECIFIC and PRECISE (not generic categories)
+        3. For sports questions, ask about specific teams, players, or competitions (not just the sport itself)
+        4. Questions should be challenging but age-appropriate
+        5. Answers must be factually correct for Israeli context
+        
+        BAD EXAMPLE: 
+        Question: "What is the most popular football game in Israel?" 
+        Answer: "Football" (TOO GENERIC)
+        
+        GOOD EXAMPLE:
+        Question: "What is the most popular football team in Israel?"
+        Answer: "Maccabi Tel Aviv" (SPECIFIC)
         
         For each question, provide:
-        1. A clear question
-        2. A concise answer
+        1. A clear, specific question
+        2. A concise, accurate, and SPECIFIC answer
         3. A helpful hint
         
         Format as a JSON array with "question", "answer", and "hint" keys.
@@ -45,7 +57,7 @@
                         }]
                     }],
                     generationConfig: {
-                        temperature: 0.8, // Slightly higher temperature for more creativity
+                        temperature: 0.7, // Slightly lower temperature for more accuracy
                         topK: 40,
                         topP: 0.95,
                         maxOutputTokens: 1024
