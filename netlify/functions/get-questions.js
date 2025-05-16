@@ -22,7 +22,7 @@
             };
         }
 
-        const promptText = `Generate ${count} kid-friendly trivia questions. For each question, provide a question, a short answer, and a one-sentence hint. Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys. Example: [{"question": "What is 2+2?", "answer": "4", "hint": "It\\'s a small number."}]. Ensure the questions are unique and suitable for children aged 6-10.`;
+        const promptText = `Generate ${count} kid-friendly trivia questions in Hebrew language that are specifically appropriate for children ages 5-8 and relevant to Israeli culture, history, geography, and everyday life. Include topics like Israeli holidays, foods, animals, landmarks, and simple facts about Israel. For each question, provide a question, a short answer, and a one-sentence hint - all in Hebrew. Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys. Example: [{"question": "כמה זה 2+2?", "answer": "4", "hint": "זה מספר קטן."}]. Make sure the questions are very simple, use basic vocabulary, and are educational for young Israeli children.`;
 
         try {
             const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
