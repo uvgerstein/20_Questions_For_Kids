@@ -4,55 +4,60 @@
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env;
         
-        console.log("API Key available:", !!GEMINI_API_KEY); // Don't log the actual key
-        
-        // Try multiple endpoints
-        const endpoints = [
-            {
-                name: "Google AI Studio API",
-                url: `https://generativelanguage.googleapis.com/v1/models?key=${GEMINI_API_KEY}`
-            },
-            {
-                name: "Vertex AI",
-                url: `https://us-central1-aiplatform.googleapis.com/v1/projects/gersteinart-sizes/locations/us-central1/publishers/google/models?key=${GEMINI_API_KEY}`
+        // This matches Google AI Studio API keys
+        const API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent';
+        const count = event.queryStringParameters?.count || 12;
+
+        // Create a prompt for kid-friendly questions
+        const prompt = `Generate ${count} kid-friendly trivia questions. For each question, provide a question, a short answer, and a one-sentence hint. Format as JSON array with "question", "answer", and "hint" keys.`;
+
+        try {
+            const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: prompt
+                        }]
+                    }]
+                }),
+            });
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error('API request failed:', response.status, errorText);
+                throw new Error(`API request failed: ${response.status}`);
             }
-        ];
-        
-        const results = {};
-        
-        for (const endpoint of endpoints) {
+
+            const data = await response.json();
+            
+            // Extract the text response
+            const text = data.candidates[0].content.parts[0].text;
+            
+            // Try to parse it as JSON
             try {
-                console.log(`Trying ${endpoint.name} endpoint...`);
-                const response = await fetch(endpoint.url);
-                const status = response.status;
+                // Clean up markdown if present
+                const cleanedText = text.replace(/```json\n?/g, '').replace(/\n?```/g, '');
+                const questions = JSON.parse(cleanedText);
                 
-                results[endpoint.name] = {
-                    status,
-                    ok: response.ok
+                return {
+                    statusCode: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(questions)
                 };
-                
-                if (response.ok) {
-                    const data = await response.json();
-                    console.log(`${endpoint.name} successful response:`, JSON.stringify(data).substring(0, 200) + "...");
-                    results[endpoint.name].data = "Data retrieved successfully";
-                } else {
-                    const errorText = await response.text();
-                    console.error(`${endpoint.name} error:`, status, errorText);
-                    results[endpoint.name].error = errorText;
-                }
-            } catch (error) {
-                console.error(`${endpoint.name} fetch error:`, error.message);
-                results[endpoint.name] = {
-                    error: error.message
-                };
+            } catch (parseError) {
+                console.error('Failed to parse API response as JSON:', parseError);
+                console.log('Raw API response:', text);
+                throw new Error('Failed to parse questions from API response');
             }
+        } catch (error) {
+            console.error('Error:', error);
+            return {
+                statusCode: 500,
+                body: JSON.stringify({ error: error.message })
+            };
         }
-        
-        return {
-            statusCode: 200,
-            body: JSON.stringify({
-                message: "API diagnostics complete",
-                results
-            })
-        };
     };
