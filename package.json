@@ -18,5 +18,8 @@
   "homepage": "https://github.com/uvgerstein/20_Questions_For_Kids#readme",
   "dependencies": {
     "node-fetch": "^2.6.7"
+  },
+  "devDependencies": {
+    "netlify-cli": "^12.14.0"
   }
 }
