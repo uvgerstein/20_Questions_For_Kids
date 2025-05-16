@@ -3,8 +3,8 @@
 
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env; // Access the API key from Netlify's environment variables
-        // Updated API URL format - changed from v1beta to v1
-        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=';
+        // Updated API URL to use gemini-2.0-flash model instead of gemini-pro
+        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=';
 
         // Default to QUESTIONS_PER_GAME (e.g., 12) if not specified in the request query parameters
         // We can't directly access QUESTIONS_PER_GAME from script.js here, so we use a common default or pass it.
