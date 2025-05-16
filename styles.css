@@ -85,6 +85,10 @@ h1 {
 
 #game-container {
     margin-bottom: 1.5rem;
+    position: relative;
+    min-height: 450px;
+    display: flex;
+    flex-direction: column;
 }
 
 #question-container {
@@ -115,6 +119,13 @@ h1 {
     margin-bottom: 1.5rem;
     border-left: 4px solid var(--secondary);
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.4s ease, opacity 0.4s ease, padding 0.4s ease;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 #answer-text {
@@ -166,6 +177,13 @@ h1 {
     border-radius: 8px;
     margin-bottom: 1.5rem;
     border-left: 4px solid var(--secondary);
+    width: 100%;
+    max-height: 0;
+    overflow: hidden;
+    opacity: 0;
+    transition: max-height 0.3s ease, opacity 0.3s ease, padding 0.3s ease;
+    padding-top: 0;
+    padding-bottom: 0;
 }
 
 #hint-text {
@@ -458,4 +476,33 @@ body #user-selection-container {
 #progress-container {
     /* Remove position: relative and padding-left */
     margin-bottom: 1.5rem;
+}
+
+/* When shown, expand the hint container */
+#hint-container:not(.hidden) {
+    max-height: 200px; /* Adjust based on expected maximum height */
+    opacity: 1;
+    padding: 1rem;
+}
+
+/* When shown, expand the answer container */
+#answer-container:not(.hidden) {
+    max-height: 300px; /* Adjust based on expected maximum height */
+    opacity: 1;
+    padding: 1.5rem;
+}
+
+/* Ensure the controls section stays in place */
+.controls {
+    margin: 1rem 0;
+}
+
+/* Modified hidden class for hint and answer containers */
+#hint-container.hidden, #answer-container.hidden {
+    display: block !important; /* Override the general .hidden class */
+    max-height: 0;
+    opacity: 0;
+    padding-top: 0;
+    padding-bottom: 0;
+    overflow: hidden;
 } 
