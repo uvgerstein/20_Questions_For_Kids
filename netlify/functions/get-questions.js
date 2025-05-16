@@ -4,12 +4,16 @@
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env;
         
-        // Update to use available model (gemini-1.5-flash)
+        // Using gemini-1.5-flash model
         const API_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent';
         const count = event.queryStringParameters?.count || 12;
 
-        // Create a prompt for kid-friendly questions
-        const prompt = `Generate ${count} kid-friendly trivia questions. For each question, provide a question, a short answer, and a one-sentence hint. Format as JSON array with "question", "answer", and "hint" keys. Example: [{"question": "What is 2+2?", "answer": "4", "hint": "It's a small number."}]`;
+        // Updated prompt to specify Hebrew language
+        const prompt = `Generate ${count} kid-friendly trivia questions IN HEBREW LANGUAGE for children ages 6-10. 
+        For each question, provide a question, a short answer, and a one-sentence hint, ALL IN HEBREW. 
+        Format as JSON array with "question", "answer", and "hint" keys. 
+        Example (but translate to Hebrew): [{"question": "What is 2+2?", "answer": "4", "hint": "It's a small number."}]
+        Important: ALL TEXT including questions, answers and hints MUST be in Hebrew only.`;
 
         try {
             const response = await fetch(`${API_URL}?key=${GEMINI_API_KEY}`, {
