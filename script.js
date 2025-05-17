@@ -727,6 +727,74 @@ function quitGame() {
     currentUser = null; // Reset current user
 }
 
+// Function to filter out bad questions that slipped through the API prompt
+function filterBadQuestions(questions) {
+    if (!questions || !Array.isArray(questions)) return [];
+    
+    return questions.filter(q => {
+        if (!q || !q.question || !q.answer) return false;
+        
+        // Strip punctuation and normalize Hebrew text
+        const normalizeHebrewText = (text) => {
+            return text.replace(/[.,?!:;""''־]/g, '')  // Remove common punctuation
+                      .replace(/\s+/g, ' ')           // Normalize whitespace
+                      .trim()                         // Trim leading/trailing spaces
+                      .toLowerCase();                 // Convert to lowercase
+        };
+        
+        const questionText = normalizeHebrewText(q.question);
+        const answerText = normalizeHebrewText(q.answer);
+        
+        // 1. Direct containment check
+        if (questionText.includes(answerText)) {
+            console.warn(`Filtering out bad question "${q.question}" - contains answer "${q.answer}"`);
+            return false;
+        }
+        
+        // 2. Check for singular form of plural answers (remove ים or ות ending)
+        if (answerText.endsWith('ים')) {
+            const singularForm = answerText.slice(0, -2);
+            if (singularForm.length > 1 && questionText.includes(singularForm)) {
+                console.warn(`Filtering out question with singular form match: "${q.question}" / "${q.answer}"`);
+                return false;
+            }
+        } else if (answerText.endsWith('ות')) {
+            const singularForm = answerText.slice(0, -2);
+            if (singularForm.length > 1 && questionText.includes(singularForm)) {
+                console.warn(`Filtering out question with singular form match: "${q.question}" / "${q.answer}"`);
+                return false;
+            }
+        }
+        
+        // 3. Check construct state (סמיכות) - common in Hebrew
+        // Examples: "מאיזה צמח מכינים שמן זית" - where זית appears in שמן זית
+        const words = questionText.split(' ');
+        for (let i = 0; i < words.length - 1; i++) {
+            const constructState = words[i] + ' ' + words[i+1];
+            if (constructState.includes(answerText) || 
+                (words[i+1] === answerText) ||
+                (answerText.length > 2 && words[i+1].includes(answerText))) {
+                console.warn(`Filtering out question with construct state containing answer: "${q.question}" / "${q.answer}"`);
+                return false;
+            }
+        }
+        
+        // 4. Check if the question is just asking for the name of something (definition questions)
+        const definitionPatterns = [
+            'מה שמו של', 'מה שמה של', 'איך קוראים ל', 'מהו השם של',
+            'מהו שמו של', 'מהו שמה של', 'מי המציא את', 'מי גילה את'
+        ];
+        
+        if (definitionPatterns.some(pattern => questionText.includes(pattern))) {
+            // These questions are often problematic, so log them for review
+            console.log(`Potential definition question (review manually): "${q.question}" / "${q.answer}"`);
+        }
+        
+        // Keep the question if it passed all checks
+        return true;
+    });
+}
+
 // NEW: Function to fetch questions from your Netlify Function
 async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) {
     // Determine age group for question complexity
@@ -740,7 +808,7 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) 
     }
     
     // Request more questions than needed to give us a buffer for filtering
-    const requestCount = Math.min(count * 2, 20); // Ask for up to 2x questions (max 20)
+    const requestCount = Math.min(count * 3, 30); // Ask for up to 3x questions (max 30)
     
     // The URL now points to your Netlify Function.
     // We pass the desired count and age group as query parameters.
@@ -773,8 +841,13 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) 
             console.error("Parsed questions from Netlify function are not in the expected format:", questions);
             throw new Error("Formatted questions from server are invalid.");
         }
+        
+        // Apply client-side filtering to catch any bad questions
+        const filteredQuestions = filterBadQuestions(questions);
+        console.log(`Filtered out ${questions.length - filteredQuestions.length} bad questions`);
+        
         // The Netlify function should already slice to count, but we can be defensive
-        return questions.slice(0, count);
+        return filteredQuestions.slice(0, count);
 
     } catch (error) {
         console.error('Error fetching questions from Netlify function:', error);

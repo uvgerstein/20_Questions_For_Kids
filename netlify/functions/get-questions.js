@@ -138,6 +138,19 @@ AVOID SELF-ANSWERING QUESTIONS:
 - Never include a term in the question that contains the answer
 - Avoid questions where the answer is directly described in the question
 - Don't use obvious definitions where naming the object is the answer
+- IMPORTANT: Never ask "מאיזה צמח מכינים שמן זית?" where the answer "זית" is part of "שמן זית"
+- CRITICAL: If the name of the item (answer) appears anywhere in the question, the question must be rejected
+
+ADDITIONAL EXAMPLES OF BAD QUESTIONS TO AVOID:
+- "מאיזה צמח מכינים שמן זית?" (answer "זית" is part of "שמן זית")
+- "מהו שמו של החג שבו מדליקים נרות בחנוכייה?" (answer "חנוכה" is part of "חנוכייה")
+- "איזה פרי משמש להכנת ריבת תותים?" (answer "תות" is part of "תותים")
+- "מי המציא את נורת החשמל?" (answer is implied from the definition)
+
+FORMAT REQUIREMENTS:
+- Generate all ${count} questions FIRST, then review each one
+- For each question, verify the answer is NOT contained within the question text
+- If the question contains any part of the answer, REPLACE IT with a better question
 `;
 
         try {
