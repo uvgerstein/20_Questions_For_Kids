@@ -177,9 +177,13 @@ async function startGame() {
     // Show loading indicator for the API call
     showLoading();
     
+    // Get the user's age for question difficulty
+    const userAge = currentUser && currentUser.age ? currentUser.age : 6;
+    console.log(`Starting game for user: ${currentUser ? currentUser.name : 'Guest'}, Age: ${userAge}`);
+    
     let fetchedQuestions;
     try {
-        fetchedQuestions = await fetchQuestionsFromGeminiAPI(QUESTIONS_PER_GAME);
+        fetchedQuestions = await fetchQuestionsFromGeminiAPI(QUESTIONS_PER_GAME, userAge);
     } catch (apiError) {
         // This catch block might be redundant if fetchQuestionsFromGeminiAPI handles its own errors and returns a fallback.
         // However, it can catch errors if fetchQuestionsFromGeminiAPI itself throws an unhandled exception before returning.
@@ -649,10 +653,22 @@ function quitGame() {
 }
 
 // NEW: Function to fetch questions from your Netlify Function
-async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME) {
+async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) {
+    // Determine age group for question complexity
+    let ageGroup = "5-6"; // default age group
+    if (age >= 5 && age <= 6) {
+        ageGroup = "5-6"; // Easier questions
+    } else if (age >= 7 && age <= 8) {
+        ageGroup = "7-8"; // Medium difficulty
+    } else if (age >= 9 && age <= 10) {
+        ageGroup = "9-10"; // More complex questions
+    }
+    
     // The URL now points to your Netlify Function.
-    // We pass the desired count as a query parameter.
-    const netlifyFunctionUrl = `/.netlify/functions/get-questions?count=${count}`;
+    // We pass the desired count and age group as query parameters.
+    const netlifyFunctionUrl = `/.netlify/functions/get-questions?count=${count}&ageGroup=${ageGroup}`;
+    
+    console.log(`Fetching questions for age group: ${ageGroup}`);
 
     try {
         const response = await fetch(netlifyFunctionUrl);
@@ -685,10 +701,22 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME) {
     } catch (error) {
         console.error('Error fetching questions from Netlify function:', error);
         alert('Could not load questions. Using sample questions. Error: ' + error.message);
-        // Fallback to default questions
-        return [
-            { question: "Fallback: What is the capital of France?", answer: "Paris", hint: "Has a famous tower." },
-            { question: "Fallback: Which animal is the King of the Jungle?", answer: "Lion", hint: "It has a large mane." }
-        ].slice(0, count);
+        // Fallback to default questions - adjust based on age group
+        if (ageGroup === "5-6") {
+            return [
+                { question: "Fallback: איזו חיה אומרת 'מיאו'?", answer: "חתול", hint: "חיית מחמד פופולרית." },
+                { question: "Fallback: איזה צבע השמיים ביום בהיר?", answer: "כחול", hint: "צבע חשוב בדגל ישראל." }
+            ].slice(0, count);
+        } else if (ageGroup === "7-8") {
+            return [
+                { question: "Fallback: מה בירת צרפת?", answer: "פריז", hint: "יש בה מגדל מפורסם." },
+                { question: "Fallback: איזו חיה היא מלך החיות?", answer: "אריה", hint: "יש לו רעמה גדולה." }
+            ].slice(0, count);
+        } else {
+            return [
+                { question: "Fallback: כמה יבשות יש בעולם?", answer: "שבע", hint: "אסיה, אפריקה, אמריקה הצפונית, אמריקה הדרומית, אנטארקטיקה, אירופה, ואוסטרליה." },
+                { question: "Fallback: מי המציא את נורת החשמל?", answer: "תומאס אדיסון", hint: "ממציא אמריקאי מפורסם." }
+            ].slice(0, count);
+        }
     }
 } 

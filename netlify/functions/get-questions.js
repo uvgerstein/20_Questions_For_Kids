@@ -6,12 +6,15 @@
         // Updated API URL to use gemini-2.0-flash model instead of gemini-pro
         const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=';
 
-        // Default to QUESTIONS_PER_GAME (e.g., 12) if not specified in the request query parameters
-        // We can't directly access QUESTIONS_PER_GAME from script.js here, so we use a common default or pass it.
-        // For simplicity, let's assume a default and allow override via query param.
+        // Get count from query parameters
         const count = event.queryStringParameters && event.queryStringParameters.count
                       ? parseInt(event.queryStringParameters.count)
                       : 12; // Default to 12 questions
+                      
+        // Get age group from query parameters
+        const ageGroup = event.queryStringParameters && event.queryStringParameters.ageGroup
+                      ? event.queryStringParameters.ageGroup
+                      : "5-6"; // Default to youngest age group
 
         if (!GEMINI_API_KEY) {
             console.error("Gemini API Key is not set in environment variables.");
@@ -21,8 +24,48 @@
                 headers: { 'Content-Type': 'application/json' },
             };
         }
+        
+        // Create different prompts based on age group
+        let ageSpecificInstructions = "";
+        let targetAge = "";
+        
+        if (ageGroup === "5-6") {
+            targetAge = "5-6";
+            ageSpecificInstructions = `
+INSTRUCTIONS FOR 5-6 YEAR OLDS:
+- Use VERY simple vocabulary and short sentences
+- Focus on basic concepts like colors, animals, shapes, numbers
+- Questions should be extremely straightforward
+- Keep answers to single words or very short phrases
+- Focus on things children can easily observe in their daily lives
+- Avoid abstract concepts entirely
+- Use familiar contexts like home, kindergarten, and family`;
+        } else if (ageGroup === "7-8") {
+            targetAge = "7-8";
+            ageSpecificInstructions = `
+INSTRUCTIONS FOR 7-8 YEAR OLDS:
+- Use simple vocabulary but can include some challenge words
+- Include basic science and geography concepts
+- Questions can require some general knowledge 
+- Answers can be short phrases or simple sentences
+- Include some "why" and "how" questions that develop reasoning
+- Focus on concrete rather than abstract concepts
+- Introduce some simple historic facts and figures`;
+        } else if (ageGroup === "9-10") {
+            targetAge = "9-10";
+            ageSpecificInstructions = `
+INSTRUCTIONS FOR 9-10 YEAR OLDS:
+- Use more advanced vocabulary appropriate for this age
+- Include more complex science, history, and geography
+- Questions should be challenging and thought-provoking
+- Answers can be more detailed, including multiple concepts
+- Include "what would happen if" type questions
+- Introduce more abstract concepts appropriate for this age
+- Include questions that require reasoning and critical thinking
+- Add some questions about current events (suitable for children)`;
+        }
 
-        const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages 5-8. 
+        const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages ${targetAge}. 
 
 CRITICAL RULES FOR QUALITY QUESTIONS:
 1. NEVER include the answer within the question itself
@@ -31,8 +74,10 @@ CRITICAL RULES FOR QUALITY QUESTIONS:
 4. AVOID questions with many possible correct answers (like "מה שמים בתוך פיתה?")
 5. ENSURE each question has ONE clear, specific correct answer
 6. CREATE genuinely challenging but age-appropriate questions
-7. USE simple Hebrew vocabulary suitable for 5-8 year olds
+7. USE simple Hebrew vocabulary suitable for ${targetAge} year olds
 8. AVOID yes/no questions entirely
+
+${ageSpecificInstructions}
 
 TOPIC VARIETY:
 Include a balanced mix of topics, not just Israel-specific content:
@@ -82,7 +127,7 @@ Make sure all ${count} questions:
 3. Have ONE specific, non-obvious correct answer
 4. Don't contain or imply their answers
 5. Cover a variety of topics - not just Israeli culture
-6. Are phrased clearly and simply`;
+6. Are phrased clearly and simply for ${targetAge} year olds`;
 
         try {
             const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
@@ -99,6 +144,9 @@ Make sure all ${count} questions:
                     maxOutputTokens: 2048,
                 }
             };
+
+            // Log that we're sending a request for a specific age group
+            console.log(`Sending request to Gemini API for age group: ${ageGroup}`);
 
             const response = await fetch(fullApiUrl, {
                 method: 'POST',
@@ -135,6 +183,9 @@ Make sure all ${count} questions:
 
             // Remove potential markdown code block fences if the API returns them
             questionsJsonString = questionsJsonString.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+
+            // Log that we received a successful response
+            console.log(`Successfully generated ${count} questions for age group ${ageGroup}`);
 
             // The questionsJsonString should be the JSON array itself.
             // The client-side will parse this.
