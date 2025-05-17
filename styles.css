@@ -591,17 +591,14 @@ body #user-selection-container {
     color: #444;
 }
 
+/* Age buttons styling with inline-block */
 .age-buttons {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
+    text-align: center;
     margin-top: 5px;
-    direction: ltr; /* Force left-to-right order */
 }
 
 .age-btn {
+    display: inline-block;
     width: 40px;
     height: 40px;
     border-radius: 50%;
@@ -612,9 +609,9 @@ body #user-selection-container {
     cursor: pointer;
     transition: all 0.2s ease;
     padding: 0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    margin: 0 4px;
+    line-height: 40px;
+    text-align: center;
 }
 
 .age-btn:hover {
