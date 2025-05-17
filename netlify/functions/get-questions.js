@@ -26,39 +26,52 @@
 
 CRITICAL RULES FOR QUALITY QUESTIONS:
 1. NEVER include the answer within the question itself
-2. NEVER create questions with obvious answers like "איזה פרי גדל על עץ זית? -> זית" (What fruit grows on an olive tree? -> Olive)
+2. NEVER create questions with obvious answers
 3. AVOID tautological questions where the answer is implied in the question
-4. CREATE genuinely challenging but age-appropriate questions
-5. USE simple Hebrew vocabulary suitable for 5-8 year olds
-6. FOCUS on Israeli culture, history, geography, holidays, foods, animals, and landmarks
-7. ENSURE answers are 1-3 words when possible
-8. MAKE hints provide a clue without giving away the answer
-9. AVOID yes/no questions entirely
+4. AVOID questions with many possible correct answers (like "מה שמים בתוך פיתה?")
+5. ENSURE each question has ONE clear, specific correct answer
+6. CREATE genuinely challenging but age-appropriate questions
+7. USE simple Hebrew vocabulary suitable for 5-8 year olds
+8. AVOID yes/no questions entirely
+
+TOPIC VARIETY:
+Include a balanced mix of topics, not just Israel-specific content:
+- Science (animals, space, human body, nature)
+- General knowledge (colors, shapes, numbers)
+- World geography and landmarks (not just Israeli)
+- Famous people from history and present
+- Arts and music
+- Sports and games
+- Fun facts and "Did you know?" type information
+- Transportation and technology
+- Food and nutrition from around the world
+- Some Israeli culture and holidays (but limit to about 1/4 of questions)
 
 Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys.
 
 GOOD EXAMPLES:
 [
   {
-    "question": "איזה חיה היא סמל העיר ירושלים?",
-    "answer": "אריה",
-    "hint": "חיה גדולה וחזקה שנקראת מלך החיות"
+    "question": "איזה חיה היא הגדולה ביותר בעולם?",
+    "answer": "לוויתן כחול",
+    "hint": "חיה שחיה באוקיינוס"
   },
   {
-    "question": "איזה צבע הוא באמצע בדגל ישראל?",
-    "answer": "לבן",
-    "hint": "אותו צבע כמו שלג וענן"
+    "question": "כמה רגליים יש לעכביש?",
+    "answer": "שמונה",
+    "hint": "מספר שבא אחרי שבע"
   },
   {
-    "question": "מה שותים עם סופגניות בחנוכה?",
-    "answer": "חלב",
-    "hint": "משקה לבן שמגיע מפרה"
+    "question": "איזה כוכב לכת הוא הקרוב ביותר לשמש?",
+    "answer": "כוכב חמה",
+    "hint": "הכוכב החם ביותר במערכת השמש"
   }
 ]
 
 BAD EXAMPLES (DO NOT CREATE QUESTIONS LIKE THESE):
 - "מה שמו של דגל ישראל?" (contains answer in question)
 - "איזה פרי גדל על עץ זית?" (the answer "זית" is too obvious from the question)
+- "מה שמים בתוך פיתה?" (too many possible answers: פלאפל, חומוס, סלט, וכו׳)
 - "איזה צבע הים?" (too obvious and generic)
 - "האם חנוכה הוא חג יהודי?" (yes/no question)
 - "מה שם העיר שהיא בירת ישראל, ירושלים?" (reveals answer)
@@ -66,9 +79,9 @@ BAD EXAMPLES (DO NOT CREATE QUESTIONS LIKE THESE):
 Make sure all ${count} questions:
 1. Are genuinely educational 
 2. Require thinking by the child
-3. Have non-obvious answers
+3. Have ONE specific, non-obvious correct answer
 4. Don't contain or imply their answers
-5. Are truly relevant to Israeli children
+5. Cover a variety of topics - not just Israeli culture
 6. Are phrased clearly and simply`;
 
         try {
