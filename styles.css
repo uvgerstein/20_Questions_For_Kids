@@ -378,7 +378,7 @@ button:hover {
 
 .avatar-choice {
     display: inline-block;
-    margin: 5px;
+    margin: 8px;
     padding: 5px;
     border: 2px solid transparent;
     border-radius: 50%;
@@ -387,8 +387,8 @@ button:hover {
 }
 
 .avatar-choice img {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
     border-radius: 50%;
     object-fit: cover;
 }
@@ -597,6 +597,7 @@ body #user-selection-container {
     justify-content: center;
     gap: 8px;
     margin-top: 5px;
+    direction: ltr; /* Force left-to-right for numbers */
 }
 
 .age-btn {
