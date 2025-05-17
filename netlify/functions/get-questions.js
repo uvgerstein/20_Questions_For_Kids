@@ -22,7 +22,43 @@
             };
         }
 
-        const promptText = `Generate ${count} kid-friendly trivia questions in Hebrew language that are specifically appropriate for children ages 5-8 and relevant to Israeli culture, history, geography, and everyday life. Include topics like Israeli holidays, foods, animals, landmarks, and simple facts about Israel. For each question, provide a question, a short answer, and a one-sentence hint - all in Hebrew. Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys. Example: [{"question": "כמה זה 2+2?", "answer": "4", "hint": "זה מספר קטן."}]. Make sure the questions are very simple, use basic vocabulary, and are educational for young Israeli children.`;
+        const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages 5-8. 
+
+IMPORTANT RULES:
+1. NEVER include the answer within the question itself
+2. Questions should be challenging but age-appropriate
+3. Use simple Hebrew vocabulary suitable for 5-8 year olds
+4. Focus on Israeli culture, history, geography, holidays, foods, animals, and landmarks
+5. Answers should be 1-3 words when possible
+6. Hints should provide a clue without giving away the answer
+
+Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys.
+
+GOOD EXAMPLES:
+[
+  {
+    "question": "איזה צבעים יש בדגל ישראל?",
+    "answer": "כחול ולבן",
+    "hint": "אלו גם הצבעים של השמיים והעננים"
+  },
+  {
+    "question": "איזה חג מדליקים בו נרות במשך שמונה ימים?",
+    "answer": "חנוכה",
+    "hint": "חוגגים אותו בחודש כסלו ואוכלים סופגניות"
+  },
+  {
+    "question": "איזה עיר היא בירת ישראל?",
+    "answer": "ירושלים",
+    "hint": "עיר עתיקה עם הכותל המערבי"
+  }
+]
+
+BAD EXAMPLES (DO NOT CREATE QUESTIONS LIKE THESE):
+- "מה שמו של דגל ישראל?" (contains answer in question)
+- "האם חנוכה הוא חג יהודי?" (yes/no question)
+- "מה שם העיר שהיא בירת ישראל, ירושלים?" (reveals answer)
+
+Make all ${count} questions unique, educational, and engaging for young Israeli children.`;
 
         try {
             const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
