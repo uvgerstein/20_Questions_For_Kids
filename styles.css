@@ -390,6 +390,7 @@ button:hover {
     width: 50px;
     height: 50px;
     border-radius: 50%;
+    object-fit: cover;
 }
 
 .avatar-choice.selected {
@@ -417,6 +418,7 @@ button:hover {
     height: 45px;
     border-radius: 50%;
     margin-left: 8px;
+    object-fit: cover;
 }
 
 #current-user-display span {
@@ -629,4 +631,76 @@ body #user-selection-container {
 .age-selection input[type="number"]::-webkit-outer-spin-button {
     opacity: 1;
     height: 30px;
+}
+
+/* Profile Confirmation Styles */
+#profile-confirmation-container {
+    background-color: #f0f8ff;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    text-align: center;
+    animation: fadeIn 0.4s ease;
+}
+
+#profile-confirmation-container h2 {
+    color: var(--primary);
+    margin-bottom: 20px;
+    font-size: 1.8rem;
+}
+
+.profile-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.large-avatar-container {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    margin-bottom: 15px;
+    border: 3px solid var(--primary);
+    overflow: hidden;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+#preview-avatar {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+#preview-name {
+    font-size: 1.6rem;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+#preview-age {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.secondary-btn {
+    background-color: #e0e0e0;
+    color: #333;
+    margin-top: 10px;
+}
+
+.secondary-btn:hover {
+    background-color: #d0d0d0;
+}
+
+@media (max-width: 600px) {
+    .large-avatar-container {
+        width: 100px;
+        height: 100px;
+    }
+    
+    #preview-name {
+        font-size: 1.4rem;
+    }
 } 

@@ -10,10 +10,10 @@ const QUESTIONS_PER_GAME = 12; // Number of questions per game
 let currentUser = null;
 let users = []; // We'll load/save this later if needed
 const avatars = [ // Updated avatar paths
-    './avatars/Anna.png',
-    './avatars/Dana.png',
-    './avatars/Jane.png',
-    './avatars/Mick.png',
+    './avatars/Updated avatars/Dina.jpg',
+    './avatars/Updated avatars/Dan.jpg',
+    './avatars/Updated avatars/Joan.jpg',
+    './avatars/Updated avatars/Timmy.jpg',
 ];
 let selectedAvatar = null;
 let isLoading = false; // Flag to prevent issues during async confirm
@@ -57,6 +57,14 @@ const newUserNameInput = document.getElementById('new-user-name');
 const ageButtons = document.querySelectorAll('.age-btn');
 const avatarSelectionDiv = document.getElementById('avatar-selection');
 const confirmUserBtn = document.getElementById('confirm-user-btn');
+
+// Profile confirmation DOM Elements
+const profileConfirmationContainer = document.getElementById('profile-confirmation-container');
+const previewAvatar = document.getElementById('preview-avatar');
+const previewName = document.getElementById('preview-name');
+const previewAge = document.getElementById('preview-age').querySelector('span');
+const startGameBtn = document.getElementById('start-game-btn');
+const backToSelectionBtn = document.getElementById('back-to-selection-btn');
 
 // Current user display DOM Elements
 const currentUserDisplay = document.getElementById('current-user-display');
@@ -102,6 +110,11 @@ function saveQuestionHistory() {
 
 // Event Listeners
 confirmUserBtn.addEventListener('click', handleUserConfirmation);
+startGameBtn.addEventListener('click', handleStartGame);
+backToSelectionBtn.addEventListener('click', () => {
+    profileConfirmationContainer.classList.add('hidden');
+    userSelectionContainer.classList.remove('hidden');
+});
 showHintBtn.addEventListener('click', () => {
     playSound(clickSound);
     showHint();
@@ -506,16 +519,14 @@ function resumeGame(savedData) {
 }
 
 // --- MODIFIED Handle User Confirmation ---
-async function handleUserConfirmation() {
+function handleUserConfirmation() {
     if (isLoading) return; // Prevent double-clicks during loading
-    isLoading = true;
     
     // Get user information
     const userNameInput = newUserNameInput.value.trim();
     const selectedAgeBtn = document.querySelector('.age-btn.selected');
     const userAge = selectedAgeBtn ? parseInt(selectedAgeBtn.dataset.age) : 6; // Default to 6 if no selection
     let userName = userNameInput;
-    let resumeData = null;
     
     // If no user name provided, use a default
     if (!userName) {
@@ -534,44 +545,61 @@ async function handleUserConfirmation() {
         age: userAge
     };
     
-    // Check for existing saved game for this user
-    const hasSavedGame = checkForSavedGame(userName);
+    // Display the profile preview
+    previewAvatar.src = currentUser.avatar;
+    previewName.textContent = currentUser.name;
+    previewAge.textContent = currentUser.age;
     
-    // Set up display with user info
+    // Hide user selection and show profile confirmation
+    userSelectionContainer.classList.add('hidden');
+    profileConfirmationContainer.classList.remove('hidden');
+    
+    // Play a sound for the transition
+    playSound(clickSound);
+}
+
+// --- NEW Handle Start Game ---
+async function handleStartGame() {
+    if (isLoading) return; // Prevent double-clicks during loading
+    isLoading = true;
+    
+    // Show loading state on button
+    const originalText = setButtonLoading(startGameBtn, "מטעין שאלות");
+    
+    // Set up display with user info for the game header
     currentUserAvatar.src = currentUser.avatar;
     currentUserName.textContent = currentUser.name;
     
-    // Show loading state on button
-    const originalText = setButtonLoading(confirmUserBtn, "מטעין שאלות");
-    
     try {
-        if (hasSavedGame) {
-            // Ask if user wants to resume (using await to pause execution)
-            const savedData = JSON.parse(localStorage.getItem(`userGame_${userName}`));
+        // Check for existing saved game
+        const hasSavedGame = checkForSavedGame(currentUser.name);
+        
+        if (hasSavedGame && hasSavedGame.exists) {
+            // Ask if user wants to resume
+            const shouldResume = confirm(`ברוך שובך, ${currentUser.name}! רוצה להמשיך את המשחק האחרון שלך?`);
             
-            if (!savedData || !savedData.version || savedData.version !== "1.0") {
-                console.warn("Found incompatible saved game data. Starting new game.");
-                await startGame();
+            if (shouldResume) {
+                console.log("User chose to resume saved game");
+                resumeGame(hasSavedGame.data);
             } else {
-                const shouldResume = confirm(`ברוך שובך, ${userName}! רוצה להמשיך את המשחק האחרון שלך?`);
-                
-                if (shouldResume) {
-                    console.log("User chose to resume saved game");
-                    resumeGame(savedData);
-                } else {
-                    console.log("User declined resume. Starting new game.");
-                    localStorage.removeItem(`userGame_${userName}`);
-                    await startGame();
-                }
+                console.log("User declined resume. Starting new game.");
+                localStorage.removeItem(hasSavedGame.key);
+                await startGame();
             }
         } else {
             // No saved game, so start a new game
             await startGame();
         }
+    } catch (error) {
+        console.error("Error starting game:", error);
+        alert("אירעה שגיאה בהתחלת המשחק. נסה שוב.");
     } finally {
-        clearButtonLoading(confirmUserBtn, originalText);
+        clearButtonLoading(startGameBtn, originalText);
         isLoading = false;
     }
+    
+    // Hide profile confirmation
+    profileConfirmationContainer.classList.add('hidden');
     
     // Hide start button as it's not needed anymore
     startBtn.classList.add('hidden');
@@ -598,8 +626,9 @@ document.addEventListener('DOMContentLoaded', () => {
         defaultAgeBtn.classList.add('selected');
     }
 
-    // Initial state: Show user selection, hide game/results/user display
+    // Initial state: Show user selection, hide profile confirmation, game, results, user display
     userSelectionContainer.classList.remove('hidden');
+    profileConfirmationContainer.classList.add('hidden');
     gameContainer.classList.add('hidden');
     resultsContainer.classList.add('hidden');
     currentUserDisplay.classList.add('hidden');
@@ -645,6 +674,7 @@ function quitGame() {
     resultsContainer.classList.add('hidden');
     currentUserDisplay.classList.add('hidden');
     avatarMenu.classList.add('hidden'); // Hide avatar menu too
+    profileConfirmationContainer.classList.add('hidden'); // Hide profile confirmation too
     userSelectionContainer.classList.remove('hidden');
     // Reset selected avatar highlight
     const currentlySelected = avatarSelectionDiv.querySelector('.selected');
