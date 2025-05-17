@@ -66,6 +66,26 @@ const saveProgressBtn = document.getElementById('save-progress-btn');
 const startOverBtn = document.getElementById('start-over-btn');
 const quitMenuBtn = document.getElementById('quit-menu-btn');
 
+// Additional DOM Elements for loading
+const loadingIndicator = document.getElementById('loading-indicator');
+
+// Functions to handle loading states
+function setButtonLoading(button, loadingText) {
+    const originalText = button.textContent;
+    button.classList.add('btn-loading');
+    if (loadingText) {
+        button.innerHTML = `<span class="loading-text">${loadingText}</span>`;
+    }
+    return originalText; // Return original text so we can restore it later
+}
+
+function clearButtonLoading(button, originalText) {
+    button.classList.remove('btn-loading');
+    if (originalText) {
+        button.textContent = originalText;
+    }
+}
+
 // Load previous question history from localStorage
 function loadQuestionHistory() {
     const savedHistory = localStorage.getItem('questionHistory');
@@ -99,7 +119,10 @@ didntKnowBtn.addEventListener('click', () => {
 });
 restartBtn.addEventListener('click', () => {
     playSound(clickSound);
-    startGame();
+    const originalText = setButtonLoading(restartBtn, "מטעין שאלות");
+    startGame().finally(() => {
+        clearButtonLoading(restartBtn, originalText);
+    });
 });
 // quitBtn.addEventListener('click', quitGame); // Remove listener for Quit button
 
@@ -121,7 +144,10 @@ startOverBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     playSound(clickSound);
     avatarMenu.classList.add('hidden');
-    startGame(); // Restart game for current user
+    const originalText = setButtonLoading(startOverBtn, "מטעין שאלות");
+    startGame().finally(() => {
+        clearButtonLoading(startOverBtn, originalText);
+    });
 });
 
 quitMenuBtn.addEventListener('click', (e) => {
@@ -130,12 +156,25 @@ quitMenuBtn.addEventListener('click', (e) => {
     quitGame(); // Go back to user selection
 });
 
+// Function to show loading indicator
+function showLoading() {
+    loadingIndicator.classList.remove('hidden');
+}
+
+// Function to hide loading indicator
+function hideLoading() {
+    loadingIndicator.classList.add('hidden');
+}
+
 // Initialize the game
 async function startGame() {
     currentQuestionIndex = 0;
     score = 0;
     
     loadQuestionHistory();
+    
+    // Show loading indicator for the API call
+    showLoading();
     
     let fetchedQuestions;
     try {
@@ -147,6 +186,9 @@ async function startGame() {
         fetchedQuestions = [ 
             { question: "API Call Error: What planet is known for its rings?", answer: "Saturn", hint: "It\'s a gas giant." }
         ];
+    } finally {
+        // Hide loading indicator when API call completes
+        hideLoading();
     }
 
     if (!fetchedQuestions || fetchedQuestions.length === 0) {
@@ -444,50 +486,72 @@ function resumeGame(savedData) {
 }
 
 // --- MODIFIED Handle User Confirmation ---
-async function handleUserConfirmation() { 
-    if (isLoading) return; 
+async function handleUserConfirmation() {
+    if (isLoading) return; // Prevent double-clicks during loading
     isLoading = true;
-
-    const userName = newUserNameInput.value.trim();
-
+    
+    // Get user information
+    const userNameInput = newUserNameInput.value.trim();
+    let userName = userNameInput;
+    let resumeData = null;
+    
+    // If no user name provided, use a default
     if (!userName) {
-        alert('אנא הכנס שם!');
-        isLoading = false;
-        return;
+        userName = "אורח" + Math.floor(Math.random() * 1000);
     }
-    if (!selectedAvatar) {
-        alert('אנא בחר תמונה!');
-        isLoading = false;
-        return;
+    
+    // If no avatar was selected, use the first one as default
+    if (!selectedAvatar && avatars.length > 0) {
+        selectedAvatar = avatars[0];
     }
-
+    
+    // Set current user
     currentUser = {
         name: userName,
         avatar: selectedAvatar
     };
-
+    
+    // Check for existing saved game for this user
+    const hasSavedGame = checkForSavedGame(userName);
+    
+    // Set up display with user info
     currentUserAvatar.src = currentUser.avatar;
     currentUserName.textContent = currentUser.name;
-
-    const savedGameCheck = checkForSavedGame(userName);
-
-    if (savedGameCheck.exists) {
-        const wantsToResume = confirm("נמצא משחק שמור. האם תרצה להמשיך?"); 
-
-        if (wantsToResume) {
-            resumeGame(savedGameCheck.data);
+    
+    // Show loading state on button
+    const originalText = setButtonLoading(confirmUserBtn, "מטעין שאלות");
+    
+    try {
+        if (hasSavedGame) {
+            // Ask if user wants to resume (using await to pause execution)
+            const savedData = JSON.parse(localStorage.getItem(`userGame_${userName}`));
+            
+            if (!savedData || !savedData.version || savedData.version !== "1.0") {
+                console.warn("Found incompatible saved game data. Starting new game.");
+                await startGame();
+            } else {
+                const shouldResume = confirm(`ברוך שובך, ${userName}! רוצה להמשיך את המשחק האחרון שלך?`);
+                
+                if (shouldResume) {
+                    console.log("User chose to resume saved game");
+                    resumeGame(savedData);
+                } else {
+                    console.log("User declined resume. Starting new game.");
+                    localStorage.removeItem(`userGame_${userName}`);
+                    await startGame();
+                }
+            }
         } else {
-            localStorage.removeItem(savedGameCheck.key);
-            console.log("User declined resume. Starting new game.");
-            playSound(clickSound);
-            await startGame(); 
+            // No saved game, so start a new game
+            await startGame();
         }
-    } else {
-        playSound(clickSound);
-        await startGame(); 
+    } finally {
+        clearButtonLoading(confirmUserBtn, originalText);
+        isLoading = false;
     }
     
-    isLoading = false;
+    // Hide start button as it's not needed anymore
+    startBtn.classList.add('hidden');
 }
 
 // Check if the DOM is loaded and initialize the game
