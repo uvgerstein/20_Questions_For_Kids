@@ -593,10 +593,12 @@ body #user-selection-container {
 
 .age-buttons {
     display: flex;
+    flex-direction: row;
     flex-wrap: wrap;
     justify-content: center;
     gap: 8px;
     margin-top: 5px;
+    direction: ltr; /* Force left-to-right order */
 }
 
 .age-btn {
