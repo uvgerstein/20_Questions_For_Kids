@@ -128,11 +128,16 @@ restartBtn.addEventListener('click', () => {
 // quitBtn.addEventListener('click', quitGame); // Remove listener for Quit button
 
 // Listener for the main user display area to toggle the menu
-currentUserDisplay.addEventListener('click', () => {
-    // Only toggle if game is active (game container is visible)
-    if (!gameContainer.classList.contains('hidden')) {
-        avatarMenu.classList.toggle('hidden');
+currentUserDisplay.addEventListener('click', (e) => {
+    console.log("Avatar clicked - game container hidden:", gameContainer.classList.contains('hidden'));
+    // Make sure the menu is positioned correctly relative to the avatar
+    // Prevent event bubbling if clicking on the avatar menu itself
+    if (e.target.closest('#avatar-menu')) {
+        return;
     }
+    
+    // Always toggle the menu when the profile avatar is clicked, regardless of game state
+    avatarMenu.classList.toggle('hidden');
 });
 
 // Listeners for the avatar menu buttons
