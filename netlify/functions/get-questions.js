@@ -65,34 +65,44 @@ INSTRUCTIONS FOR 9-10 YEAR OLDS:
 - Add some questions about current events (suitable for children)`;
         }
 
-        const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages ${targetAge}. 
+        const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages ${targetAge}.
 
-CRITICAL RULES FOR QUALITY QUESTIONS:
-1. NEVER include the answer within the question itself
-2. NEVER create questions with obvious answers
-3. AVOID tautological questions where the answer is implied in the question
-4. AVOID questions with many possible correct answers (like "מה שמים בתוך פיתה?")
-5. ENSURE each question has ONE clear, specific correct answer
-6. CREATE genuinely challenging but age-appropriate questions
-7. USE simple Hebrew vocabulary suitable for ${targetAge} year olds
-8. AVOID yes/no questions entirely
+GOAL:
+Create fun and thought-provoking questions that children can answer with one specific, correct response.
 
+AGE GUIDELINES:
 ${ageSpecificInstructions}
 
+FORMAT:
+Return a valid JSON array of ${count} objects, where each object has:
+- "question": a clear question in Hebrew
+- "answer": one specific, correct answer
+- "hint": a short clue that helps without giving the answer away
+
+RULES:
+1. Do not include the answer in the question text.
+   Example to avoid: "מה שמה של בירת ישראל, ירושלים?"
+2. Avoid yes/no questions.
+   Example to avoid: "האם כדור הארץ עגול?"
+3. Avoid vague or multi-answer questions.
+   Example to avoid: "מה שמים בתוך פיתה?"
+4. Use Hebrew vocabulary appropriate for age ${targetAge}.
+5. Each question must have one clear, non-obvious correct answer.
+6. Questions must require thinking—not guessing something obvious.
+7. Phrase all questions simply and clearly.
+
 TOPIC VARIETY:
-Include a balanced mix of topics, not just Israel-specific content:
-- Science (animals, space, human body, nature)
-- General knowledge (colors, shapes, numbers)
-- World geography and landmarks (not just Israeli)
-- Famous people from history and present
+Include a balanced mix of topics:
+- Animals and nature
+- Space and science
+- World geography
+- Famous people (Israeli and global)
 - Arts and music
 - Sports and games
-- Fun facts and "Did you know?" type information
-- Transportation and technology
-- Food and nutrition from around the world
-- Some Israeli culture and holidays (but limit to about 1/4 of questions)
-
-Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys.
+- Food and nutrition
+- Technology and transportation
+- Fun facts
+- Israeli culture and holidays (limit to about 25% of the questions)
 
 GOOD EXAMPLES:
 [
@@ -113,21 +123,14 @@ GOOD EXAMPLES:
   }
 ]
 
-BAD EXAMPLES (DO NOT CREATE QUESTIONS LIKE THESE):
-- "מה שמו של דגל ישראל?" (contains answer in question)
-- "איזה פרי גדל על עץ זית?" (the answer "זית" is too obvious from the question)
-- "מה שמים בתוך פיתה?" (too many possible answers: פלאפל, חומוס, סלט, וכו׳)
-- "איזה צבע הים?" (too obvious and generic)
+BAD EXAMPLES (DO NOT CREATE):
+- "מה שמו של דגל ישראל?" (answer is in the question)
+- "איזה פרי גדל על עץ זית?" (answer is too obvious)
+- "מה שמים בתוך פיתה?" (too many possible answers)
+- "איזה צבע הים?" (too generic)
 - "האם חנוכה הוא חג יהודי?" (yes/no question)
-- "מה שם העיר שהיא בירת ישראל, ירושלים?" (reveals answer)
-
-Make sure all ${count} questions:
-1. Are genuinely educational 
-2. Require thinking by the child
-3. Have ONE specific, non-obvious correct answer
-4. Don't contain or imply their answers
-5. Cover a variety of topics - not just Israeli culture
-6. Are phrased clearly and simply for ${targetAge} year olds`;
+- "מה שם העיר שהיא בירת ישראל, ירושלים?" (answer is included)
+`;
 
         try {
             const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
