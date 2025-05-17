@@ -130,6 +130,14 @@ BAD EXAMPLES (DO NOT CREATE):
 - "איזה צבע הים?" (too generic)
 - "האם חנוכה הוא חג יהודי?" (yes/no question)
 - "מה שם העיר שהיא בירת ישראל, ירושלים?" (answer is included)
+- "מה עוזר לנו לראות בחושך?" (obvious answer: אור)
+- "איזה ספורט משחקים עם כדור וסל?" (answer "כדורסל" contained in question)
+- "מה שמו של המאכל העשוי מחומוס, טחינה, שמן זית ותבלינים?" (contains ingredient "חומוס" in question)
+
+AVOID SELF-ANSWERING QUESTIONS:
+- Never include a term in the question that contains the answer
+- Avoid questions where the answer is directly described in the question
+- Don't use obvious definitions where naming the object is the answer
 `;
 
         try {

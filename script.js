@@ -3,7 +3,7 @@ let currentQuestions = [];
 let currentQuestionIndex = 0;
 let score = 0;
 let usedQuestionSets = [];
-const MAX_HISTORY = 10; // Track last 10 games to prevent repeats
+const MAX_HISTORY = 30; // Increased from 10 to 30 to track more history
 const QUESTIONS_PER_GAME = 12; // Number of questions per game
 
 // User state variables
@@ -265,16 +265,50 @@ function getUniqueQuestions(questionsFromApi, count = QUESTIONS_PER_GAME) {
         return [];
     }
 
+    // Get all recently used question texts as a flat array
     const recentlyUsedQuestionTexts = usedQuestionSets.flat();
-    let availableQuestions = questionsFromApi.filter(q => q && q.question && !recentlyUsedQuestionTexts.includes(q.question));
+    
+    // Weight more recent questions higher for filtering
+    // Create a map to track how recently each question was used
+    const questionRecencyMap = {};
+    recentlyUsedQuestionTexts.forEach((questionText, index) => {
+        // Calculate a recency score - higher means more recently used
+        const gameIndex = Math.floor(index / QUESTIONS_PER_GAME); // Which game this question was from
+        const recencyScore = usedQuestionSets.length - gameIndex; // More recent = higher score
+        questionRecencyMap[questionText] = Math.max(recencyScore, questionRecencyMap[questionText] || 0);
+    });
+
+    // Filter out recently used questions
+    let availableQuestions = questionsFromApi.filter(q => {
+        if (!q || !q.question) return false;
+        // If it's not in history at all, keep it 
+        if (!questionRecencyMap[q.question]) return true;
+        // If it's been used in the last 2 games, filter it out
+        if (questionRecencyMap[q.question] >= (usedQuestionSets.length - 1)) return false;
+        // Keep older questions
+        return true;
+    });
     
     if (availableQuestions.length < count && questionsFromApi.length > 0) {
         // If filtering made the list too short, but the original API list had items
         console.warn(`Only ${availableQuestions.length} unique (not recently used) questions found from API set of ${questionsFromApi.length}. If this is less than ${count}, some questions might be repeated from recent global history or API provided fewer unique ones than desired after filtering.`);
-        // If not enough unique questions, and we need to fill up to 'count', we might reuse from the original API set, preferring those not in 'recentlyUsedQuestionTexts'
-        if (availableQuestions.length === 0 && questionsFromApi.length > 0) {
-             console.warn("All questions from the API batch were in usedQuestionSets. Re-using directly from API batch for this game.");
-             availableQuestions = [...questionsFromApi]; // Use the API questions, will be shuffled next
+        
+        // If not enough unique questions, gradually relax our filtering
+        if (availableQuestions.length === 0) {
+            console.warn("All questions from the API batch were too recent. Relaxing filters.");
+            // Allow questions except those from the very most recent game
+            availableQuestions = questionsFromApi.filter(q => {
+                if (!q || !q.question) return false;
+                if (!questionRecencyMap[q.question]) return true;
+                // Only filter out questions from the most recent game
+                return questionRecencyMap[q.question] < usedQuestionSets.length;
+            });
+            
+            // If still empty, use the API questions, will be shuffled next
+            if (availableQuestions.length === 0) {
+                console.warn("All questions from the API batch were in the most recent game. Re-using directly from API batch for this game.");
+                availableQuestions = [...questionsFromApi];
+            }
         }
     }
     
@@ -282,6 +316,11 @@ function getUniqueQuestions(questionsFromApi, count = QUESTIONS_PER_GAME) {
     for (let i = availableQuestions.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [availableQuestions[i], availableQuestions[j]] = [availableQuestions[j], availableQuestions[i]];
+    }
+    
+    // Request more questions if we don't have enough after filtering
+    if (availableQuestions.length < count && count > 0) {
+        console.warn(`After filtering and shuffling, only have ${availableQuestions.length} questions, which is fewer than the ${count} requested.`);
     }
     
     return availableQuestions.slice(0, Math.min(count, availableQuestions.length));
@@ -700,11 +739,14 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) 
         ageGroup = "9-10"; // More complex questions
     }
     
+    // Request more questions than needed to give us a buffer for filtering
+    const requestCount = Math.min(count * 2, 20); // Ask for up to 2x questions (max 20)
+    
     // The URL now points to your Netlify Function.
     // We pass the desired count and age group as query parameters.
-    const netlifyFunctionUrl = `/.netlify/functions/get-questions?count=${count}&ageGroup=${ageGroup}`;
+    const netlifyFunctionUrl = `/.netlify/functions/get-questions?count=${requestCount}&ageGroup=${ageGroup}`;
     
-    console.log(`Fetching questions for age group: ${ageGroup}`);
+    console.log(`Fetching ${requestCount} questions for age group: ${ageGroup}`);
 
     try {
         const response = await fetch(netlifyFunctionUrl);
