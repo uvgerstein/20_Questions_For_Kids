@@ -54,6 +54,7 @@ const totalQuestionsElement = document.getElementById('total-questions');
 const userSelectionContainer = document.getElementById('user-selection-container');
 const existingUsersDiv = document.getElementById('existing-users');
 const newUserNameInput = document.getElementById('new-user-name');
+const userAgeInput = document.getElementById('user-age');
 const avatarSelectionDiv = document.getElementById('avatar-selection');
 const confirmUserBtn = document.getElementById('confirm-user-btn');
 
@@ -454,6 +455,12 @@ function resumeGame(savedData) {
     score = savedData.score || 0;
     currentQuestionIndex = savedData.currentQuestionIndex || 0;
     currentQuestions = savedData.currentQuestions || [];
+    
+    // Restore user info if available
+    if (savedData.user && savedData.user.age) {
+        currentUser.age = savedData.user.age;
+    }
+    
     // Restore used questions history (if saved)
     if (savedData.usedQuestionSets) {
         usedQuestionSets = savedData.usedQuestionSets;
@@ -474,10 +481,6 @@ function resumeGame(savedData) {
     currentUserDisplay.classList.remove('hidden');
     avatarMenu.classList.add('hidden');
     
-    // Update user display (already set in handleUserConfirmation)
-    // currentUserAvatar.src = currentUser.avatar;
-    // currentUserName.textContent = currentUser.name;
-
     // Update total questions display
     totalQuestionsElement.textContent = currentQuestions.length > 0 ? currentQuestions.length : QUESTIONS_PER_GAME;
 
@@ -492,6 +495,7 @@ async function handleUserConfirmation() {
     
     // Get user information
     const userNameInput = newUserNameInput.value.trim();
+    const userAge = parseInt(userAgeInput.value) || 6; // Default to 6 if invalid
     let userName = userNameInput;
     let resumeData = null;
     
@@ -505,10 +509,11 @@ async function handleUserConfirmation() {
         selectedAvatar = avatars[0];
     }
     
-    // Set current user
+    // Set current user with age property
     currentUser = {
         name: userName,
-        avatar: selectedAvatar
+        avatar: selectedAvatar,
+        age: userAge
     };
     
     // Check for existing saved game for this user
@@ -576,7 +581,13 @@ function saveUserProgress() {
         currentQuestionIndex: currentQuestionIndex,
         // Storing full question objects might be large, consider storing only IDs/texts if needed
         currentQuestions: currentQuestions, 
-        usedQuestionSets: usedQuestionSets // Save global history for now, could be user-specific later
+        usedQuestionSets: usedQuestionSets, // Save global history for now, could be user-specific later
+        // Save user details including age
+        user: {
+            name: currentUser.name,
+            avatar: currentUser.avatar,
+            age: currentUser.age || 6
+        }
         // timestamp: Date.now() // Optional: add a timestamp
     };
 

@@ -572,4 +572,40 @@ body #user-selection-container {
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
+}
+
+/* Age selection styling */
+.age-selection {
+    margin: 15px 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+}
+
+.age-selection label {
+    font-weight: bold;
+    color: #444;
+}
+
+.age-selection input[type="number"] {
+    width: 70px;
+    padding: 8px 10px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    text-align: center;
+}
+
+.age-selection input[type="number"]:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(74, 102, 255, 0.2);
+}
+
+/* Disable spinner buttons for cleaner look */
+.age-selection input[type="number"]::-webkit-inner-spin-button,
+.age-selection input[type="number"]::-webkit-outer-spin-button {
+    opacity: 1;
+    height: 30px;
 } 
