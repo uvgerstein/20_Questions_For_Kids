@@ -597,7 +597,6 @@ body #user-selection-container {
     justify-content: center;
     gap: 8px;
     margin-top: 5px;
-    direction: ltr; /* Force left-to-right for numbers */
 }
 
 .age-btn {
@@ -704,4 +703,13 @@ body #user-selection-container {
     #preview-name {
         font-size: 1.4rem;
     }
+}
+
+/* Copyright styling */
+#copyright {
+    text-align: center;
+    margin-top: 20px;
+    padding: 10px;
+    font-size: 0.9rem;
+    color: #666;
 } 

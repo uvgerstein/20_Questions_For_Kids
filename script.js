@@ -526,11 +526,12 @@ function handleUserConfirmation() {
     const userNameInput = newUserNameInput.value.trim();
     const selectedAgeBtn = document.querySelector('.age-btn.selected');
     const userAge = selectedAgeBtn ? parseInt(selectedAgeBtn.dataset.age) : 6; // Default to 6 if no selection
-    let userName = userNameInput;
     
-    // If no user name provided, use a default
-    if (!userName) {
-        userName = "אורח" + Math.floor(Math.random() * 1000);
+    // Validate that a name has been entered
+    if (!userNameInput) {
+        alert("אנא הכנס את שמך לפני שתמשיך");
+        newUserNameInput.focus();
+        return;
     }
     
     // If no avatar was selected, use the first one as default
@@ -540,7 +541,7 @@ function handleUserConfirmation() {
     
     // Set current user with age property
     currentUser = {
-        name: userName,
+        name: userNameInput,
         avatar: selectedAvatar,
         age: userAge
     };
