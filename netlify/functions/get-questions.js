@@ -24,41 +24,52 @@
 
         const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages 5-8. 
 
-IMPORTANT RULES:
+CRITICAL RULES FOR QUALITY QUESTIONS:
 1. NEVER include the answer within the question itself
-2. Questions should be challenging but age-appropriate
-3. Use simple Hebrew vocabulary suitable for 5-8 year olds
-4. Focus on Israeli culture, history, geography, holidays, foods, animals, and landmarks
-5. Answers should be 1-3 words when possible
-6. Hints should provide a clue without giving away the answer
+2. NEVER create questions with obvious answers like "איזה פרי גדל על עץ זית? -> זית" (What fruit grows on an olive tree? -> Olive)
+3. AVOID tautological questions where the answer is implied in the question
+4. CREATE genuinely challenging but age-appropriate questions
+5. USE simple Hebrew vocabulary suitable for 5-8 year olds
+6. FOCUS on Israeli culture, history, geography, holidays, foods, animals, and landmarks
+7. ENSURE answers are 1-3 words when possible
+8. MAKE hints provide a clue without giving away the answer
+9. AVOID yes/no questions entirely
 
 Format the output as a valid JSON array of objects, where each object has "question", "answer", and "hint" keys.
 
 GOOD EXAMPLES:
 [
   {
-    "question": "איזה צבעים יש בדגל ישראל?",
-    "answer": "כחול ולבן",
-    "hint": "אלו גם הצבעים של השמיים והעננים"
+    "question": "איזה חיה היא סמל העיר ירושלים?",
+    "answer": "אריה",
+    "hint": "חיה גדולה וחזקה שנקראת מלך החיות"
   },
   {
-    "question": "איזה חג מדליקים בו נרות במשך שמונה ימים?",
-    "answer": "חנוכה",
-    "hint": "חוגגים אותו בחודש כסלו ואוכלים סופגניות"
+    "question": "איזה צבע הוא באמצע בדגל ישראל?",
+    "answer": "לבן",
+    "hint": "אותו צבע כמו שלג וענן"
   },
   {
-    "question": "איזה עיר היא בירת ישראל?",
-    "answer": "ירושלים",
-    "hint": "עיר עתיקה עם הכותל המערבי"
+    "question": "מה שותים עם סופגניות בחנוכה?",
+    "answer": "חלב",
+    "hint": "משקה לבן שמגיע מפרה"
   }
 ]
 
 BAD EXAMPLES (DO NOT CREATE QUESTIONS LIKE THESE):
 - "מה שמו של דגל ישראל?" (contains answer in question)
+- "איזה פרי גדל על עץ זית?" (the answer "זית" is too obvious from the question)
+- "איזה צבע הים?" (too obvious and generic)
 - "האם חנוכה הוא חג יהודי?" (yes/no question)
 - "מה שם העיר שהיא בירת ישראל, ירושלים?" (reveals answer)
 
-Make all ${count} questions unique, educational, and engaging for young Israeli children.`;
+Make sure all ${count} questions:
+1. Are genuinely educational 
+2. Require thinking by the child
+3. Have non-obvious answers
+4. Don't contain or imply their answers
+5. Are truly relevant to Israeli children
+6. Are phrased clearly and simply`;
 
         try {
             const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
