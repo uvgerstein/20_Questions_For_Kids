@@ -578,6 +578,7 @@ body #user-selection-container {
 .age-selection {
     margin: 15px 0;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
     gap: 10px;
@@ -588,19 +589,39 @@ body #user-selection-container {
     color: #444;
 }
 
-.age-selection input[type="number"] {
-    width: 70px;
-    padding: 8px 10px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    font-size: 1rem;
-    text-align: center;
+.age-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 5px;
 }
 
-.age-selection input[type="number"]:focus {
+.age-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #f0f8ff;
+    border: 2px solid #ccc;
+    font-size: 1rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.age-btn:hover {
+    background-color: #e0f0ff;
+    border-color: #999;
+}
+
+.age-btn.selected {
+    background-color: var(--primary);
+    color: white;
     border-color: var(--primary);
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(74, 102, 255, 0.2);
 }
 
 /* Disable spinner buttons for cleaner look */

@@ -54,7 +54,7 @@ const totalQuestionsElement = document.getElementById('total-questions');
 const userSelectionContainer = document.getElementById('user-selection-container');
 const existingUsersDiv = document.getElementById('existing-users');
 const newUserNameInput = document.getElementById('new-user-name');
-const userAgeInput = document.getElementById('user-age');
+const ageButtons = document.querySelectorAll('.age-btn');
 const avatarSelectionDiv = document.getElementById('avatar-selection');
 const confirmUserBtn = document.getElementById('confirm-user-btn');
 
@@ -459,6 +459,14 @@ function resumeGame(savedData) {
     // Restore user info if available
     if (savedData.user && savedData.user.age) {
         currentUser.age = savedData.user.age;
+        
+        // Update the selected age button in the UI
+        ageButtons.forEach(btn => {
+            btn.classList.remove('selected');
+            if (parseInt(btn.dataset.age) === currentUser.age) {
+                btn.classList.add('selected');
+            }
+        });
     }
     
     // Restore used questions history (if saved)
@@ -495,7 +503,8 @@ async function handleUserConfirmation() {
     
     // Get user information
     const userNameInput = newUserNameInput.value.trim();
-    const userAge = parseInt(userAgeInput.value) || 6; // Default to 6 if invalid
+    const selectedAgeBtn = document.querySelector('.age-btn.selected');
+    const userAge = selectedAgeBtn ? parseInt(selectedAgeBtn.dataset.age) : 6; // Default to 6 if no selection
     let userName = userNameInput;
     let resumeData = null;
     
@@ -563,6 +572,22 @@ async function handleUserConfirmation() {
 document.addEventListener('DOMContentLoaded', () => {
     totalQuestionsElement.textContent = QUESTIONS_PER_GAME;
     populateAvatars();
+
+    // Add event listeners for age buttons
+    ageButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            // Remove selected class from all buttons
+            ageButtons.forEach(btn => btn.classList.remove('selected'));
+            // Add selected class to clicked button
+            button.classList.add('selected');
+        });
+    });
+    
+    // Select default age button (age 6)
+    const defaultAgeBtn = document.querySelector('.age-btn[data-age="6"]');
+    if (defaultAgeBtn) {
+        defaultAgeBtn.classList.add('selected');
+    }
 
     // Initial state: Show user selection, hide game/results/user display
     userSelectionContainer.classList.remove('hidden');
