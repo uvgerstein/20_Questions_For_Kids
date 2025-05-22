@@ -256,17 +256,66 @@ JSON FORMAT EXAMPLE:
                     console.log(`Successfully generated ${count} questions using ${model} for age group ${ageGroup}`);
 
                     try {
+                        // Add detailed logging for debugging
+                        const originalLength = questionsJsonString.length;
+                        console.log(`Raw response length: ${originalLength} chars`);
+                        console.log("First 200 chars of raw response:", questionsJsonString.substring(0, 200).replace(/\n/g, ' '));
+                        
                         // Clean and repair potentially malformed JSON
                         questionsJsonString = cleanAndRepairJson(questionsJsonString);
+                        console.log(`After repair, length: ${questionsJsonString.length} chars`);
                         
                         // Parse the JSON string to validate it
-                        const parsedQuestions = JSON.parse(questionsJsonString);
-                        if (!Array.isArray(parsedQuestions)) {
-                            throw new Error("Response is not a valid array");
+                        let parsedQuestions = [];
+                        try {
+                            parsedQuestions = JSON.parse(questionsJsonString);
+                            if (!Array.isArray(parsedQuestions)) {
+                                console.warn("Parsed result is not an array, trying to fix");
+                                // If we got a single object, wrap it in an array
+                                if (typeof parsedQuestions === 'object') {
+                                    parsedQuestions = [parsedQuestions];
+                                } else {
+                                    throw new Error("Response is not a valid array or object");
+                                }
+                            }
+                        } catch (parseError) {
+                            console.error("JSON parse error after repair:", parseError);
+                            // Move to next model if parsing fails
+                            continue modelLoop;
+                        }
+                        
+                        console.log(`Parsed ${parsedQuestions.length} questions from JSON`);
+                        
+                        // Validate questions and fill in missing fields if necessary
+                        const validQuestions = parsedQuestions.filter(q => {
+                            // Basic structure validation
+                            if (!q || typeof q !== 'object') return false;
+                            
+                            // Ensure essential fields exist
+                            if (!q.question || !q.answer) {
+                                console.warn("Skipping question with missing fields:", JSON.stringify(q).substring(0, 100));
+                                return false;
+                            }
+                            
+                            // Add hint if missing
+                            if (!q.hint && q.question && q.answer) {
+                                console.log("Adding missing hint for question:", q.question.substring(0, 30));
+                                q.hint = "רמז לא זמין";
+                            }
+                            
+                            return true;
+                        });
+                        
+                        console.log(`Validated ${validQuestions.length} questions with required fields`);
+                        
+                        // If we have fewer than minimum questions, retry with next model
+                        if (validQuestions.length < Math.min(5, count)) {
+                            console.warn(`Insufficient questions (${validQuestions.length}) from model ${model}, trying next model`);
+                            continue modelLoop;
                         }
                         
                         // Add signature tracking for question diversity
-                        parsedQuestions.forEach(q => {
+                        validQuestions.forEach(q => {
                             // Create a simplified signature from the question to track for repeats
                             q.signature = q.question
                                 .replace(/[.,?!;:'"()\[\]{}]/g, '') // Remove punctuation
@@ -277,24 +326,29 @@ JSON FORMAT EXAMPLE:
                                 .join('|'); // Create a sorted signature
                         });
                         
-                        console.log(`✓ SUCCESS: Generated ${parsedQuestions.length} unique questions for age group ${ageGroup}`);
+                        console.log(`✓ SUCCESS: Generated ${validQuestions.length} unique questions for age group ${ageGroup}`);
                         
                         // Return the valid JSON string with metadata
                         return {
                             statusCode: 200,
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                questions: parsedQuestions,
+                                questions: validQuestions,
                                 meta: {
                                     source: 'generated',
                                     model: model,
                                     ageGroup: ageGroup,
-                                    timestamp: new Date().toISOString()
+                                    timestamp: new Date().toISOString(),
+                                    requested: count,
+                                    received: validQuestions.length,
+                                    repaired: originalLength !== questionsJsonString.length
                                 }
                             }),
                         };
                     } catch (parseError) {
-                        console.warn(`Failed to parse ${model} response as JSON:`, parseError);
+                        console.error(`Failed to process ${model} response:`, parseError);
+                        // Save error details for diagnosis
+                        console.error("Response sample:", questionsJsonString ? questionsJsonString.substring(0, 300) : "empty");
                         // Continue with next retry
                         continue;
                     }
@@ -432,107 +486,255 @@ JSON FORMAT EXAMPLE:
 
     // Function to clean and repair malformed JSON
     function cleanAndRepairJson(jsonString) {
-        if (!jsonString) return '[]';
+        if (!jsonString) {
+            console.error("Empty JSON string received");
+            return '[]';
+        }
         
-        // Helpful debug if needed
-        // console.log("Original JSON string:", JSON.stringify(jsonString.substring(0, 500)));
+        // Log a sample for debugging
+        console.log("JSON sample (first 200 chars):", jsonString.substring(0, 200).replace(/\n/g, ' ').trim() + '...');
         
         try {
-            // Common patterns from Gemini API that break JSON
-            // 1. Fix missing double quotes in field names
+            // Step 1: Check if it's already valid JSON
+            try {
+                const parsed = JSON.parse(jsonString);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log("JSON is already valid with", parsed.length, "items");
+                    return jsonString;
+                }
+            } catch (e) {
+                console.log("Initial JSON parse failed, starting repair process");
+            }
+            
+            // Step 2: Basic cleanup before processing
+            // Remove markdown code blocks
+            jsonString = jsonString.replace(/```(?:json)?\s*([\s\S]*?)\s*```/g, '$1');
+            
+            // Step 3: Clean specific Hebrew/JSON issues
+            // Remove non-standard quotes and replace with standard ones
+            jsonString = jsonString.replace(/[״""„'']/g, '"');
+            
+            // Replace RTL/LTR markers that might break JSON
+            jsonString = jsonString.replace(/[\u200E\u200F\u202A-\u202E]/g, '');
+            
+            // Fix common spacing issues
+            jsonString = jsonString.replace(/\s+/g, ' ');
+            
+            // Ensure the string starts with [ and ends with ]
+            jsonString = jsonString.trim();
+            if (!jsonString.startsWith('[')) jsonString = '[' + jsonString;
+            if (!jsonString.endsWith(']')) jsonString = jsonString + ']';
+            
+            // Step 4: Attempt more structural repairs
+            // Fix missing quotes around property names
             jsonString = jsonString.replace(/{\s*([a-zA-Z0-9_]+)\s*:/g, '{"$1":');
             
-            // 2. Fix missing commas between objects in arrays
+            // Fix missing commas between objects
             jsonString = jsonString.replace(/}\s*{/g, '},{');
             
-            // 3. Fix unterminated strings (harder to detect, but attempt with common patterns)
-            // Find lines with odd number of quotes which might indicate unterminated strings
+            // Fix trailing commas in arrays
+            jsonString = jsonString.replace(/,\s*]/g, ']');
+            
+            // Try parsing again after these repairs
+            try {
+                const parsed = JSON.parse(jsonString);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log("JSON repaired successfully with", parsed.length, "items");
+                    return jsonString;
+                }
+            } catch (e) {
+                console.log("Basic repairs were not enough, continuing with deeper fixes");
+            }
+            
+            // Step 5: More aggressive line-by-line repair
             const lines = jsonString.split('\n');
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i];
-                // Count quotes in this line
-                const quoteCount = (line.match(/"/g) || []).length;
                 
-                // If odd number of quotes and not the last line
-                if (quoteCount % 2 === 1 && i < lines.length - 1) {
-                    // Add a closing quote at the end of the line
-                    lines[i] = line + '"';
+                // Count quotes to find unbalanced quotes
+                const quoteCount = (line.match(/"/g) || []).length;
+                if (quoteCount % 2 === 1) {
+                    if (i < lines.length - 1) {
+                        // Try to fix by adding a closing quote
+                        lines[i] = line + '"';
+                    }
                 }
+                
+                // Fix common Hebrew JSON issues (missing quotes, extra characters)
+                lines[i] = lines[i]
+                    .replace(/([{,]\s*)([א-ת\w]+)(\s*:)/g, '$1"$2"$3') // Add quotes around Hebrew property names
+                    .replace(/:(\s*)([^",\s][^",}]*?)(\s*[,}])/g, ':"$2"$3'); // Add quotes around unquoted string values
             }
             jsonString = lines.join('\n');
             
-            // 4. Replace Hebrew quotes with standard quotes
-            jsonString = jsonString.replace(/[״""]/g, '"');
-            
-            // 5. Fix issue with trailing commas in arrays
-            jsonString = jsonString.replace(/,\s*]/g, ']');
-            
-            // 6. Fix escaped quotes within strings
-            // First capture existing properly escaped quotes
-            jsonString = jsonString.replace(/\\"/g, '__ESCAPED_QUOTE__');
-            // Fix unescaped quotes inside strings 
-            const fixQuotesInString = (str) => {
-                let inString = false;
-                let result = '';
-                for (let i = 0; i < str.length; i++) {
-                    const char = str[i];
-                    if (char === '"' && (i === 0 || str[i-1] !== '\\')) {
-                        inString = !inString;
-                    }
-                    
-                    // If we're in a string and encounter an unescaped quote
-                    if (inString && char === '"' && i > 0 && str[i-1] !== '\\' && i < str.length - 1) {
-                        result += '\\"';
-                    } else {
-                        result += char;
-                    }
-                }
-                return result;
-            };
-            jsonString = fixQuotesInString(jsonString);
-            
-            // Restore the properly escaped quotes
-            jsonString = jsonString.replace(/__ESCAPED_QUOTE__/g, '\\"');
-            
-            // 7. Make sure the string starts with [ and ends with ]
-            if (!jsonString.trim().startsWith('[')) {
-                jsonString = '[' + jsonString.trim();
-            }
-            if (!jsonString.trim().endsWith(']')) {
-                jsonString = jsonString.trim() + ']';
-            }
-            
-            // 8. Try to make it a valid array if all else fails
+            // Try parsing after aggressive fixes
             try {
-                JSON.parse(jsonString);
+                const parsed = JSON.parse(jsonString);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    console.log("JSON repaired through line-by-line processing with", parsed.length, "items");
+                    return jsonString;
+                }
             } catch (e) {
-                // If parsing still fails, try to extract objects from the text
-                const objects = [];
-                const regex = /{[^{}]*}/g;
-                let match;
-                while ((match = regex.exec(jsonString)) !== null) {
-                    try {
-                        const obj = JSON.parse(match[0]);
-                        if (obj.question && obj.answer) {
-                            objects.push(obj);
+                console.log("Line repairs failed, attempting object extraction", e.message);
+            }
+            
+            // Step 6: Direct regex extraction of question objects
+            console.log("Extracting objects from malformed JSON...");
+            const extractedQuestions = [];
+            
+            // Search for complete objects
+            // This regex looks for objects containing question and answer fields
+            const objectPattern = /{([^{}]|(?:\{[^{}]*\}))*"question"[^{}]*"answer"[^{}]*}/g;
+            let match;
+            
+            while ((match = objectPattern.exec(jsonString)) !== null) {
+                try {
+                    let objStr = match[0];
+                    
+                    // Perform repairs on the individual object
+                    objStr = objStr
+                        .replace(/([{,]\s*)([א-ת\w]+)(\s*:)/g, '$1"$2"$3') // Fix property names
+                        .replace(/:(\s*)([^",\s][^",}]*?)(\s*[,}])/g, ':$1"$2"$3') // Fix unquoted values
+                        .replace(/"\s*:\s*"/g, '":"') // Normalize spacing
+                        .replace(/",\s*}/g, '"}'); // Fix trailing commas
+                    
+                    // Try to parse this object
+                    const obj = JSON.parse(objStr);
+                    if (obj && obj.question && obj.answer) {
+                        if (!obj.hint) {
+                            obj.hint = "רמז לא זמין"; // Default hint in Hebrew
                         }
-                    } catch (objError) {
-                        // Skip invalid objects
+                        extractedQuestions.push(obj);
+                        console.log(`Extracted question: "${obj.question.substring(0, 30)}..."`);
+                    }
+                } catch (objErr) {
+                    console.warn("Failed to parse extracted object:", match[0].substring(0, 50) + "...");
+                }
+            }
+            
+            if (extractedQuestions.length > 0) {
+                console.log(`Successfully extracted ${extractedQuestions.length} complete questions`);
+                return JSON.stringify(extractedQuestions);
+            }
+            
+            // Step 7: Last resort - extract individual fields and reconstruct
+            console.log("Attempting field extraction as last resort");
+            
+            // Extract individual fields
+            const questions = [];
+            const answersByQuestion = new Map();
+            const hintsByQuestion = new Map();
+            
+            // These regexes find field values even in malformed JSON
+            // Looking for "question": "value" patterns
+            const questionRegex = /"question"\s*:\s*"([^"]+)"/g;
+            const answerRegex = /"answer"\s*:\s*"([^"]+)"/g;  
+            const hintRegex = /"hint"\s*:\s*"([^"]+)"/g;
+            
+            // Extract all question field values
+            while ((match = questionRegex.exec(jsonString)) !== null) {
+                const questionText = match[1].trim();
+                if (questionText.length > 5) { // Only consider non-trivial questions
+                    questions.push(questionText);
+                }
+            }
+            
+            // Extract all answer field values
+            while ((match = answerRegex.exec(jsonString)) !== null) {
+                // Get nearby question for this answer if possible
+                const answerText = match[1].trim();
+                const pos = match.index;
+                
+                // Find closest question by position
+                let closestQuestion = null;
+                let minDistance = Infinity;
+                
+                for (const q of questions) {
+                    const qPos = jsonString.indexOf(q);
+                    if (qPos !== -1) {
+                        const distance = Math.abs(pos - qPos);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestQuestion = q;
+                        }
                     }
                 }
                 
-                if (objects.length > 0) {
-                    return JSON.stringify(objects);
+                if (closestQuestion && minDistance < 500) { // Only associate if reasonably close
+                    answersByQuestion.set(closestQuestion, answerText);
                 }
-                
-                // Last resort - return empty array to prevent crashing
-                console.error("Could not repair JSON, using empty array");
-                return '[]';
             }
             
-            return jsonString;
+            // Extract all hint field values
+            while ((match = hintRegex.exec(jsonString)) !== null) {
+                // Get nearby question for this hint
+                const hintText = match[1].trim();
+                const pos = match.index;
+                
+                // Find closest question by position
+                let closestQuestion = null;
+                let minDistance = Infinity;
+                
+                for (const q of questions) {
+                    const qPos = jsonString.indexOf(q);
+                    if (qPos !== -1) {
+                        const distance = Math.abs(pos - qPos);
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestQuestion = q;
+                        }
+                    }
+                }
+                
+                if (closestQuestion && minDistance < 500) { // Only associate if reasonably close
+                    hintsByQuestion.set(closestQuestion, hintText);
+                }
+            }
+            
+            // Create complete question objects
+            const reconstructedQuestions = [];
+            
+            for (const questionText of questions) {
+                if (answersByQuestion.has(questionText)) {
+                    reconstructedQuestions.push({
+                        question: questionText,
+                        answer: answersByQuestion.get(questionText),
+                        hint: hintsByQuestion.has(questionText) 
+                            ? hintsByQuestion.get(questionText) 
+                            : "רמז לא זמין"
+                    });
+                }
+            }
+            
+            if (reconstructedQuestions.length > 0) {
+                console.log(`Successfully reconstructed ${reconstructedQuestions.length} questions from fields`);
+                return JSON.stringify(reconstructedQuestions);
+            }
+            
+            // If we've tried everything and failed, simply extract anything that looks like a question
+            const lastChanceQuestions = [];
+            // Just grab anything with question: and answer: patterns
+            const lastChanceRegex = /"question"\s*:\s*"([^"]+)"[^}]*"answer"\s*:\s*"([^"]+)"/g;
+            
+            while ((match = lastChanceRegex.exec(jsonString)) !== null) {
+                lastChanceQuestions.push({
+                    question: match[1].trim(),
+                    answer: match[2].trim(),
+                    hint: "רמז לא זמין"
+                });
+            }
+            
+            if (lastChanceQuestions.length > 0) {
+                console.log(`Last chance extraction found ${lastChanceQuestions.length} questions`);
+                return JSON.stringify(lastChanceQuestions);
+            }
+            
+            // Truly nothing worked
+            console.error("All JSON repair methods failed, returning empty array");
+            console.error("Sample of problematic JSON:", jsonString.substring(0, 500));
+            return '[]';
         } catch (e) {
-            console.error("Error in JSON repair:", e);
+            console.error("Error in JSON repair function:", e);
             return '[]';
         }
     }
