@@ -44,16 +44,41 @@
         </div>
 
         <!-- User Selection Area -->
-        <div id="user-selection-container">
-            <h2>בחר שחקן</h2>
-            <div id="existing-users">
-                <!-- Existing users will be populated here -->
+        <div id="user-selection-container" class="container">
+            <h2>שאלות לילדים</h2>
+            <div class="subtitle">משחק טריוויה חינוכי ומהנה</div>
+            
+            <!-- Leaderboard section -->
+            <div id="leaderboard-container" class="leaderboard-container">
+                <h3>לוח המובילים</h3>
+                <table id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th class="avatar-column">תמונה</th>
+                            <th>שחקן</th>
+                            <th>גיל</th>
+                            <th>תוצאה</th>
+                            <th>תאריך</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-data">
+                        <!-- Leaderboard entries will be inserted here dynamically -->
+                        <tr class="no-records">
+                            <td colspan="5">המשחק הראשון שלך יופיע כאן!</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
-            <h3>או צור שחקן חדש:</h3>
-            <input type="text" id="new-user-name" placeholder="הכנס את שמך">
+            
+            <div class="input-section">
+                <label for="new-user-name">הכנס את שמך:</label>
+                <input type="text" id="new-user-name" placeholder="השם שלך" autocomplete="off" maxlength="15" />
+            </div>
+            
+            <!-- Age selection -->
             <div class="age-selection">
-                <label>גיל:</label>
-                <div class="age-buttons" dir="ltr">
+                <h4>בחר גיל:</h4>
+                <div class="age-buttons-container">
                     <button class="age-btn" data-age="5">5</button>
                     <button class="age-btn" data-age="6">6</button>
                     <button class="age-btn" data-age="7">7</button>
@@ -62,10 +87,12 @@
                     <button class="age-btn" data-age="10">10</button>
                 </div>
             </div>
-            <div id="avatar-selection">
-                <h4>בחר תמונה:</h4>
-                <!-- Avatars will be populated here -->
+            
+            <!-- Avatar selection -->
+            <div id="avatar-selection" class="avatar-selection">
+                <!-- Will be populated by JS -->
             </div>
+            
             <button id="confirm-user-btn" class="btn">המשך</button>
         </div>
 
@@ -114,10 +141,14 @@
         </div>
 
         <!-- Results Area -->
-        <div id="results-container" class="hidden">
-            <h2>המשחק נגמר</h2>
-            <p id="score-message">הציון שלך: <span id="score">0</span>/12</p>
-            <button id="restart-btn" class="btn">שחק שוב</button>
+        <div id="results-container" class="container hidden">
+            <h2>סיכום</h2>
+            <p>הציון שלך: <span id="score">0</span> מתוך <span id="total-questions">12</span></p>
+            <p id="score-message"></p>
+            <div class="button-group">
+                <button id="restart-btn" class="btn">שחק שוב</button>
+                <button id="view-leaderboard-btn" class="btn">לוח המובילים</button>
+            </div>
         </div>
         
         <!-- Loading Indicator (hidden by default) -->

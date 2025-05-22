@@ -5,6 +5,10 @@ let score = 0;
 let usedQuestionSets = [];
 const MAX_HISTORY = 30; // Increased from 10 to 30 to track more history
 const QUESTIONS_PER_GAME = 12; // Number of questions per game
+const MAX_LEADERBOARD_ENTRIES = 5; // Number of entries to show on leaderboard
+
+// Leaderboard state
+let leaderboardData = [];
 
 // User state variables
 let currentUser = null;
@@ -95,17 +99,33 @@ function clearButtonLoading(button, originalText) {
     }
 }
 
-// Load previous question history from localStorage
+// Load previous question history and leaderboard from localStorage
 function loadQuestionHistory() {
     const savedHistory = localStorage.getItem('questionHistory');
     if (savedHistory) {
         usedQuestionSets = JSON.parse(savedHistory);
     }
+    
+    // Load leaderboard
+    const savedLeaderboard = localStorage.getItem('gameLeaderboard');
+    if (savedLeaderboard) {
+        try {
+            leaderboardData = JSON.parse(savedLeaderboard);
+        } catch (e) {
+            console.error("Error parsing leaderboard data:", e);
+            leaderboardData = [];
+        }
+    }
 }
 
-// Save current question history to localStorage
+// Save current question history and leaderboard to localStorage
 function saveQuestionHistory() {
     localStorage.setItem('questionHistory', JSON.stringify(usedQuestionSets));
+}
+
+// Save leaderboard data
+function saveLeaderboardData() {
+    localStorage.setItem('gameLeaderboard', JSON.stringify(leaderboardData));
 }
 
 // Event Listeners
@@ -114,6 +134,7 @@ startGameBtn.addEventListener('click', handleStartGame);
 backToSelectionBtn.addEventListener('click', () => {
     profileConfirmationContainer.classList.add('hidden');
     userSelectionContainer.classList.remove('hidden');
+    displayLeaderboard(); // Refresh leaderboard when returning
 });
 showHintBtn.addEventListener('click', () => {
     playSound(clickSound);
@@ -138,7 +159,19 @@ restartBtn.addEventListener('click', () => {
         clearButtonLoading(restartBtn, originalText);
     });
 });
-// quitBtn.addEventListener('click', quitGame); // Remove listener for Quit button
+
+// Add event listener for view leaderboard button
+const viewLeaderboardBtn = document.getElementById('view-leaderboard-btn');
+if (viewLeaderboardBtn) {
+    viewLeaderboardBtn.addEventListener('click', () => {
+        playSound(clickSound);
+        // Return to user selection screen and refresh leaderboard
+        resultsContainer.classList.add('hidden');
+        userSelectionContainer.classList.remove('hidden');
+        // Refresh leaderboard display
+        displayLeaderboard();
+    });
+}
 
 // Listener for the main user display area to toggle the menu
 currentUserDisplay.addEventListener('click', (e) => {
@@ -453,6 +486,9 @@ function endGame() {
     }
     scoreMessage.textContent = `${messagePrefix} ${feedbackMessage}`; // Combine personalized prefix and feedback
     
+    // Add to leaderboard
+    addToLeaderboard(currentUser.name, currentUser.age, score);
+    
     // Clear saved progress for this user upon completion
     if (currentUser) {
         const storageKey = `userProgress_${currentUser.name}`;
@@ -649,6 +685,12 @@ async function handleStartGame() {
 document.addEventListener('DOMContentLoaded', () => {
     totalQuestionsElement.textContent = QUESTIONS_PER_GAME;
     populateAvatars();
+    
+    // Load history and leaderboard
+    loadQuestionHistory();
+    
+    // Display leaderboard
+    displayLeaderboard();
 
     // Add event listeners for age buttons
     ageButtons.forEach(button => {
@@ -716,6 +758,7 @@ function quitGame() {
     avatarMenu.classList.add('hidden'); // Hide avatar menu too
     profileConfirmationContainer.classList.add('hidden'); // Hide profile confirmation too
     userSelectionContainer.classList.remove('hidden');
+    
     // Reset selected avatar highlight
     const currentlySelected = avatarSelectionDiv.querySelector('.selected');
     if (currentlySelected) {
@@ -725,6 +768,9 @@ function quitGame() {
     // Maybe clear the name input? 
     // newUserNameInput.value = ''; 
     currentUser = null; // Reset current user
+    
+    // Refresh leaderboard when returning to home screen
+    displayLeaderboard();
 }
 
 // Function to filter out bad questions that slipped through the API prompt
@@ -919,4 +965,84 @@ function getFallbackQuestions(ageGroup, count) {
     }
     
     return fallbackQuestions.slice(0, count);
+}
+
+// Add score to leaderboard
+function addToLeaderboard(playerName, playerAge, playerScore) {
+    // Create new entry
+    const newEntry = {
+        name: playerName,
+        age: playerAge,
+        score: playerScore,
+        date: new Date().toLocaleDateString('he-IL'),
+        timestamp: Date.now(), // For sorting
+        avatar: currentUser.avatar // Save the user's avatar
+    };
+    
+    // Add to leaderboard array
+    leaderboardData.push(newEntry);
+    
+    // Sort by timestamp (newest first)
+    leaderboardData.sort((a, b) => b.timestamp - a.timestamp);
+    
+    // Trim to maximum entries
+    if (leaderboardData.length > MAX_LEADERBOARD_ENTRIES * 3) { // Keep some buffer for history
+        leaderboardData = leaderboardData.slice(0, MAX_LEADERBOARD_ENTRIES * 3);
+    }
+    
+    // Save to localStorage
+    saveLeaderboardData();
+    
+    // Update leaderboard display if needed
+    if (userSelectionContainer.classList.contains('hidden') === false) {
+        displayLeaderboard();
+    }
+}
+
+// Display leaderboard in the UI
+function displayLeaderboard() {
+    const leaderboardTable = document.getElementById('leaderboard-data');
+    
+    // Clear existing entries
+    leaderboardTable.innerHTML = '';
+    
+    // If no entries
+    if (leaderboardData.length === 0) {
+        leaderboardTable.innerHTML = `
+            <tr class="no-records">
+                <td colspan="5">המשחק הראשון שלך יופיע כאן!</td>
+            </tr>
+        `;
+        return;
+    }
+    
+    // Take top entries ordered by timestamp (most recent first)
+    // Limited to MAX_LEADERBOARD_ENTRIES
+    const displayEntries = leaderboardData
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, MAX_LEADERBOARD_ENTRIES);
+    
+    // Add each entry to the table
+    displayEntries.forEach((entry, index) => {
+        const row = document.createElement('tr');
+        
+        // Highlight the most recent entry
+        if (index === 0 && entry.timestamp > Date.now() - 60000) { // If added in the last minute
+            row.classList.add('new-record');
+        }
+        
+        // Use a default avatar if none exists (for backward compatibility)
+        const avatarSrc = entry.avatar || avatars[0];
+        
+        // Create the row content
+        row.innerHTML = `
+            <td><img src="${avatarSrc}" alt="תמונת שחקן" class="leaderboard-avatar"></td>
+            <td>${entry.name}</td>
+            <td>${entry.age}</td>
+            <td>${entry.score}/${QUESTIONS_PER_GAME}</td>
+            <td>${entry.date}</td>
+        `;
+        
+        leaderboardTable.appendChild(row);
+    });
 } 
