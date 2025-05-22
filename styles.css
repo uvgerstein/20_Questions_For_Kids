@@ -934,4 +934,60 @@ th.avatar-column {
     font-size: 18px;
     bottom: -6px;
     right: -6px;
+}
+
+/* Source indicators for generated vs fallback questions */
+#game-container.source-generated #progress-container::before {
+    content: "✓ המשחק משתמש בשאלות חדשות";
+    display: block;
+    color: #38B000;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    animation: fadeIn 0.5s ease-in;
+}
+
+#game-container.source-fallback #progress-container::before {
+    content: "ℹ️ המשחק משתמש בשאלות מוכנות מראש";
+    display: block;
+    color: #FF9F1C;
+    font-weight: bold;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    animation: fadeIn 0.5s ease-in;
+}
+
+/* Optional: Add subtle background colors to indicate source */
+#game-container.source-generated {
+    position: relative;
+}
+
+#game-container.source-generated::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(56, 176, 0, 0.05), transparent 70%);
+    pointer-events: none;
+    border-radius: 12px;
+    z-index: -1;
+}
+
+#game-container.source-fallback {
+    position: relative;
+}
+
+#game-container.source-fallback::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(45deg, rgba(255, 159, 28, 0.07), transparent 70%);
+    pointer-events: none;
+    border-radius: 12px;
+    z-index: -1;
 } 

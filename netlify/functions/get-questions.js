@@ -298,11 +298,19 @@ FORMAT REQUIREMENTS:
                     
                     console.log(`✓ SUCCESS: Generated ${parsedQuestions.length} unique questions for age group ${ageGroup}`);
                     
-                    // Return the valid JSON string
+                    // Return the valid JSON string with metadata
                     return {
                         statusCode: 200,
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(parsedQuestions), // Send the parsed and enhanced questions
+                        body: JSON.stringify({
+                            questions: parsedQuestions,
+                            meta: {
+                                source: 'generated',
+                                model: model,
+                                ageGroup: ageGroup,
+                                timestamp: new Date().toISOString()
+                            }
+                        }),
                     };
                 } catch (parseError) {
                     console.warn(`Failed to parse ${model} response as JSON:`, parseError);
@@ -322,11 +330,20 @@ FORMAT REQUIREMENTS:
         // Return fallback questions instead of an error
         console.log('⚠️ FALLBACK: Using pre-defined fallback questions for age group', ageGroup);
         const fallbackQuestionsJson = getFallbackQuestions(ageGroup, count);
+        const fallbackQuestions = JSON.parse(fallbackQuestionsJson);
         
         return {
             statusCode: 200,
-            body: fallbackQuestionsJson,
             headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                questions: fallbackQuestions,
+                meta: {
+                    source: 'fallback',
+                    ageGroup: ageGroup,
+                    timestamp: new Date().toISOString(),
+                    reason: lastError ? `API error: ${lastError.status}` : 'API key missing'
+                }
+            }),
         };
     };
 

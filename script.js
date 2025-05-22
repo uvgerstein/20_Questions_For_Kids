@@ -968,11 +968,42 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) 
 
         // Parse the response text as JSON
         const questionsJsonString = await response.text();
-        let questions;
+        let parsedResponse;
         try {
-            questions = JSON.parse(questionsJsonString);
+            parsedResponse = JSON.parse(questionsJsonString);
         } catch (parseError) {
             console.error("Failed to parse response as JSON:", parseError);
+            return getFallbackQuestions(ageGroup, count);
+        }
+
+        // Check if we have the new response format with metadata
+        let questions;
+        let sourceInfo = null;
+        
+        if (parsedResponse.questions && parsedResponse.meta) {
+            // New format with metadata
+            questions = parsedResponse.questions;
+            sourceInfo = parsedResponse.meta;
+            console.log(`Questions source: ${sourceInfo.source}${sourceInfo.model ? ` (model: ${sourceInfo.model})` : ''}`);
+            
+            // Add visual indicator to game container based on source
+            if (gameContainer) {
+                // Remove any existing source indicators
+                gameContainer.classList.remove('source-generated', 'source-fallback');
+                // Add appropriate class
+                gameContainer.classList.add(`source-${sourceInfo.source}`);
+            }
+            
+            // If using fallbacks, we can show a message to the user
+            if (sourceInfo.source === 'fallback') {
+                console.warn(`Using fallback questions. Reason: ${sourceInfo.reason || 'Unknown'}`);
+            }
+        } else if (Array.isArray(parsedResponse)) {
+            // Old format (just an array of questions)
+            questions = parsedResponse;
+            console.log('Using legacy response format (no metadata)');
+        } else {
+            console.error("Response not in expected format:", parsedResponse);
             return getFallbackQuestions(ageGroup, count);
         }
 
