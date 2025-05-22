@@ -3,8 +3,13 @@
 
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env; // Access the API key from Netlify's environment variables
-        // Updated API URL to use gemini-2.5-flash model which is the latest version
-        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=';
+        
+        // Use gemini-1.5-pro as primary model with fallbacks
+        const GEMINI_MODELS = [
+            'gemini-1.5-pro', // Most capable model currently available
+            'gemini-1.5-flash', // Faster alternative
+            'gemini-pro' // Older fallback option
+        ];
 
         // Get count from query parameters
         const count = event.queryStringParameters && event.queryStringParameters.count
@@ -25,7 +30,7 @@
                 headers: { 'Content-Type': 'application/json' },
             };
         }
-        
+
         // Create different prompts based on age group
         let ageSpecificInstructions = "";
         let targetAge = "";
@@ -170,104 +175,99 @@ FORMAT REQUIREMENTS:
 - If the question contains any part of the answer, REPLACE IT with a better question
 `;
 
-        try {
-            const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
-            const requestBody = {
-                contents: [{
-                    parts: [{
-                        text: promptText
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.8, // Slightly increased for more diversity
-                    topK: 40,
-                    topP: 0.95,
-                    maxOutputTokens: 2048,
-                }
-            };
-
-            // Log that we're sending a request for a specific age group
-            console.log(`Sending request to Gemini 2.5 Flash API for age group: ${ageGroup}`);
-
-            const response = await fetch(fullApiUrl, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody),
-                // Add timeout to prevent long-running requests
-                timeout: 25000 // 25 second timeout
-            });
-
-            if (!response.ok) {
-                const errorBodyText = await response.text();
-                console.error('Gemini API request failed:', response.status, errorBodyText);
-                
-                // Return fallback questions instead of an error
-                return {
-                    statusCode: 200,
-                    body: getFallbackQuestions(ageGroup, count),
-                    headers: { 'Content-Type': 'application/json' },
-                };
-            }
-
-            const data = await response.json();
-            let questionsJsonString;
-
-            // Adjust this path based on the actual Gemini API response structure
-            if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
-                questionsJsonString = data.candidates[0].content.parts[0].text;
-            } else {
-                console.error("Unexpected Gemini API response structure:", JSON.stringify(data, null, 2));
-                
-                // Return fallback questions
-                return {
-                    statusCode: 200,
-                    body: getFallbackQuestions(ageGroup, count),
-                    headers: { 'Content-Type': 'application/json' },
-                };
-            }
-
-            // Remove potential markdown code block fences if the API returns them
-            questionsJsonString = questionsJsonString.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-
-            // Log that we received a successful response
-            console.log(`Successfully generated ${count} questions for age group ${ageGroup}`);
-
+        // Try each model in succession until one works
+        let lastError = null;
+        for (const model of GEMINI_MODELS) {
             try {
-                // Parse the JSON string to validate it
-                const parsedQuestions = JSON.parse(questionsJsonString);
-                if (!Array.isArray(parsedQuestions)) {
-                    throw new Error("Response is not a valid array");
-                }
+                const GEMINI_API_BASE_URL = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=`;
+                const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
                 
-                // Return the valid JSON string
-                return {
-                    statusCode: 200,
-                    headers: { 'Content-Type': 'application/json' },
-                    body: questionsJsonString, // Send the string directly
-                };
-            } catch (parseError) {
-                console.error("Failed to parse Gemini API response as JSON:", parseError, "Raw response:", questionsJsonString);
+                console.log(`Trying model: ${model} for age group: ${ageGroup}`);
                 
-                // Return fallback questions
-                return {
-                    statusCode: 200,
-                    body: getFallbackQuestions(ageGroup, count),
-                    headers: { 'Content-Type': 'application/json' },
+                const requestBody = {
+                    contents: [{
+                        parts: [{
+                            text: promptText
+                        }]
+                    }],
+                    generationConfig: {
+                        temperature: 0.8, // Slightly increased for more diversity
+                        topK: 40,
+                        topP: 0.95,
+                        maxOutputTokens: 2048,
+                    }
                 };
-            }
 
-        } catch (error) {
-            console.error('Error in Netlify function while fetching from Gemini API:', error);
-            
-            // Return fallback questions instead of an error
-            return {
-                statusCode: 200,
-                body: getFallbackQuestions(ageGroup, count),
-                headers: { 'Content-Type': 'application/json' },
-            };
+                const response = await fetch(fullApiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestBody),
+                    // Add timeout to prevent long-running requests
+                    timeout: 25000 // 25 second timeout
+                });
+
+                if (!response.ok) {
+                    const errorBodyText = await response.text();
+                    console.warn(`Model ${model} request failed:`, response.status, errorBodyText);
+                    lastError = { status: response.status, body: errorBodyText };
+                    // Continue to the next model
+                    continue;
+                }
+
+                const data = await response.json();
+                let questionsJsonString;
+
+                // Extract the generated text from the model's response
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+                    questionsJsonString = data.candidates[0].content.parts[0].text;
+                } else {
+                    console.warn(`Unexpected response structure from model ${model}:`, JSON.stringify(data, null, 2));
+                    // Continue to the next model
+                    continue;
+                }
+
+                // Remove potential markdown code block fences if the API returns them
+                questionsJsonString = questionsJsonString.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+
+                // Log that we received a successful response
+                console.log(`Successfully generated ${count} questions using ${model} for age group ${ageGroup}`);
+
+                try {
+                    // Parse the JSON string to validate it
+                    const parsedQuestions = JSON.parse(questionsJsonString);
+                    if (!Array.isArray(parsedQuestions)) {
+                        throw new Error("Response is not a valid array");
+                    }
+                    
+                    // Return the valid JSON string
+                    return {
+                        statusCode: 200,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: questionsJsonString, // Send the string directly
+                    };
+                } catch (parseError) {
+                    console.warn(`Failed to parse ${model} response as JSON:`, parseError);
+                    // Continue to the next model
+                    continue;
+                }
+            } catch (modelError) {
+                console.warn(`Error with model ${model}:`, modelError);
+                lastError = modelError;
+                // Continue to the next model
+            }
         }
+        
+        // If we get here, all models failed
+        console.error('All Gemini models failed to generate questions.', lastError);
+        
+        // Return fallback questions instead of an error
+        return {
+            statusCode: 200,
+            body: getFallbackQuestions(ageGroup, count),
+            headers: { 'Content-Type': 'application/json' },
+        };
     };
 
     // Function to get fallback questions based on age group

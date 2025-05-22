@@ -716,11 +716,39 @@ body #user-selection-container {
 /* Add styles for leaderboard */
 .leaderboard-container {
     margin: 30px auto 15px;
-    max-width: 500px;
+    max-width: 600px; /* Increased from 500px for more space */
     background-color: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
     padding: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    max-height: 500px; /* Limit maximum height */
+    overflow-y: auto; /* Add scrolling if needed */
+}
+
+/* Make the table header stick to the top when scrolling */
+#leaderboard-table thead {
+    background-color: white;
+    z-index: 1;
+}
+
+/* Reduce row height slightly to fit more entries */
+#leaderboard-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #ddd;
+    vertical-align: middle;
+}
+
+/* Ensure top 3 players stand out more clearly */
+#leaderboard-table tbody tr:nth-child(1) {
+    background-color: rgba(255, 215, 0, 0.2) !important; /* Gold with transparency */
+}
+
+#leaderboard-table tbody tr:nth-child(2) {
+    background-color: rgba(192, 192, 192, 0.2) !important; /* Silver with transparency */
+}
+
+#leaderboard-table tbody tr:nth-child(3) {
+    background-color: rgba(205, 127, 50, 0.2) !important; /* Bronze with transparency */
 }
 
 /* Add a separator above the leaderboard */
@@ -753,12 +781,9 @@ body #user-selection-container {
     color: white;
     padding: 8px;
     font-weight: bold;
-}
-
-#leaderboard-table td {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-    vertical-align: middle;
+    position: sticky;
+    top: 0;
+    z-index: 2;
 }
 
 #leaderboard-table tr:nth-child(even) {
@@ -888,4 +913,25 @@ th.avatar-column {
 #leaderboard-table tbody tr:first-child td {
     font-weight: bold;
     border-bottom: 2px solid gold;
+}
+
+/* Rank badges */
+.rank-badge {
+    position: absolute;
+    bottom: -5px;
+    right: -5px;
+    font-size: 16px;
+    filter: drop-shadow(1px 1px 1px rgba(0,0,0,0.3));
+}
+
+/* Ensure avatar container is positioned for badge placement */
+#leaderboard-table td:first-child {
+    position: relative;
+}
+
+/* Increase size slightly for the top player's badge */
+.rank-badge.gold {
+    font-size: 18px;
+    bottom: -6px;
+    right: -6px;
 } 

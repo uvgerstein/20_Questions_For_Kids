@@ -5,7 +5,7 @@ let score = 0;
 let usedQuestionSets = [];
 const MAX_HISTORY = 30; // Increased from 10 to 30 to track more history
 const QUESTIONS_PER_GAME = 12; // Number of questions per game
-const MAX_LEADERBOARD_ENTRIES = 5; // Number of entries to show on leaderboard
+const MAX_LEADERBOARD_ENTRIES = 10; // Number of entries to show on leaderboard
 
 // Leaderboard state
 let leaderboardData = [];
@@ -941,6 +941,7 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) 
     const fallbackFunctionUrl = `/api/get-questions?count=${requestCount}&ageGroup=${ageGroup}`;
     
     console.log(`Fetching ${requestCount} questions for age group: ${ageGroup}`);
+    console.log("Note: Using multiple Gemini model fallback system");
 
     try {
         // Try Netlify function first
@@ -1121,9 +1122,19 @@ function displayLeaderboard() {
         // Use a default avatar if none exists (for backward compatibility)
         const avatarSrc = entry.avatar || avatars[0];
         
+        // Add ranking badge for top 3 players
+        let rankBadge = '';
+        if (index === 0) {
+            rankBadge = '<span class="rank-badge gold">🏆</span>';
+        } else if (index === 1) {
+            rankBadge = '<span class="rank-badge silver">🥈</span>';
+        } else if (index === 2) {
+            rankBadge = '<span class="rank-badge bronze">🥉</span>';
+        }
+        
         // Create the row content
         row.innerHTML = `
-            <td><img src="${avatarSrc}" alt="תמונת שחקן" class="leaderboard-avatar"></td>
+            <td><img src="${avatarSrc}" alt="תמונת שחקן" class="leaderboard-avatar">${rankBadge}</td>
             <td>${entry.name}</td>
             <td>${entry.age}</td>
             <td>${entry.score}/${QUESTIONS_PER_GAME}</td>
