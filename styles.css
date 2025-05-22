@@ -715,12 +715,22 @@ body #user-selection-container {
 
 /* Add styles for leaderboard */
 .leaderboard-container {
-    margin: 20px auto;
+    margin: 30px auto 15px;
     max-width: 500px;
     background-color: rgba(255, 255, 255, 0.9);
     border-radius: 12px;
     padding: 15px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+/* Add a separator above the leaderboard */
+.leaderboard-container:before {
+    content: '';
+    display: block;
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(0, 0, 0, 0.1), transparent);
+    margin: -15px auto 15px;
 }
 
 .leaderboard-container h3 {
@@ -863,4 +873,9 @@ th.avatar-column {
         width: 35px;
         height: 35px;
     }
+}
+
+/* Continue button style update */
+#confirm-user-btn {
+    margin-bottom: 10px;
 } 

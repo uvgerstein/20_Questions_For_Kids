@@ -45,31 +45,6 @@
 
         <!-- User Selection Area -->
         <div id="user-selection-container" class="container">
-            <h2>שאלות לילדים</h2>
-            <div class="subtitle">משחק טריוויה חינוכי ומהנה</div>
-            
-            <!-- Leaderboard section -->
-            <div id="leaderboard-container" class="leaderboard-container">
-                <h3>לוח המובילים</h3>
-                <table id="leaderboard-table">
-                    <thead>
-                        <tr>
-                            <th class="avatar-column">תמונה</th>
-                            <th>שחקן</th>
-                            <th>גיל</th>
-                            <th>תוצאה</th>
-                            <th>תאריך</th>
-                        </tr>
-                    </thead>
-                    <tbody id="leaderboard-data">
-                        <!-- Leaderboard entries will be inserted here dynamically -->
-                        <tr class="no-records">
-                            <td colspan="5">המשחק הראשון שלך יופיע כאן!</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            
             <div class="input-section">
                 <label for="new-user-name">הכנס את שמך:</label>
                 <input type="text" id="new-user-name" placeholder="השם שלך" autocomplete="off" maxlength="15" />
@@ -94,6 +69,28 @@
             </div>
             
             <button id="confirm-user-btn" class="btn">המשך</button>
+            
+            <!-- Leaderboard section -->
+            <div id="leaderboard-container" class="leaderboard-container">
+                <h3>לוח המובילים</h3>
+                <table id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th class="avatar-column">תמונה</th>
+                            <th>שחקן</th>
+                            <th>גיל</th>
+                            <th>תוצאה</th>
+                            <th>תאריך</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-data">
+                        <!-- Leaderboard entries will be inserted here dynamically -->
+                        <tr class="no-records">
+                            <td colspan="5">המשחק הראשון שלך יופיע כאן!</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <!-- Profile Confirmation Area (New) -->
