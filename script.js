@@ -291,6 +291,100 @@ async function startGame() {
     }
 }
 
+// Function to filter out bad questions that slipped through the API prompt
+function filterBadQuestions(questions) {
+    if (!questions || !Array.isArray(questions)) return [];
+    
+    // Keep track of question topics to avoid similar questions
+    const topicCategories = new Set();
+    
+    return questions.filter(q => {
+        if (!q || !q.question || !q.answer) return false;
+        
+        // Strip punctuation and normalize Hebrew text
+        const normalizeHebrewText = (text) => {
+            return text.replace(/[.,?!:;""''־]/g, '')  // Remove common punctuation
+                      .replace(/\s+/g, ' ')           // Normalize whitespace
+                      .trim()                         // Trim leading/trailing spaces
+                      .toLowerCase();                 // Convert to lowercase
+        };
+        
+        const questionText = normalizeHebrewText(q.question);
+        const answerText = normalizeHebrewText(q.answer);
+        
+        // 1. Direct containment check
+        if (questionText.includes(answerText)) {
+            console.warn(`Filtering out bad question "${q.question}" - contains answer "${q.answer}"`);
+            return false;
+        }
+        
+        // 2. Check for singular form of plural answers (remove ים or ות ending)
+        if (answerText.endsWith('ים')) {
+            const singularForm = answerText.slice(0, -2);
+            if (singularForm.length > 1 && questionText.includes(singularForm)) {
+                console.warn(`Filtering out question with singular form match: "${q.question}" / "${q.answer}"`);
+                return false;
+            }
+        } else if (answerText.endsWith('ות')) {
+            const singularForm = answerText.slice(0, -2);
+            if (singularForm.length > 1 && questionText.includes(singularForm)) {
+                console.warn(`Filtering out question with singular form match: "${q.question}" / "${q.answer}"`);
+                return false;
+            }
+        }
+        
+        // 3. Check construct state (סמיכות) - common in Hebrew
+        // Examples: "מאיזה צמח מכינים שמן זית" - where זית appears in שמן זית
+        const words = questionText.split(' ');
+        for (let i = 0; i < words.length - 1; i++) {
+            const constructState = words[i] + ' ' + words[i+1];
+            if (constructState.includes(answerText) || 
+                (words[i+1] === answerText) ||
+                (answerText.length > 2 && words[i+1].includes(answerText))) {
+                console.warn(`Filtering out question with construct state containing answer: "${q.question}" / "${q.answer}"`);
+                return false;
+            }
+        }
+        
+        // 4. Check if the question is just asking for the name of something (definition questions)
+        const definitionPatterns = [
+            'מה שמו של', 'מה שמה של', 'איך קוראים ל', 'מהו השם של',
+            'מהו שמו של', 'מהו שמה של', 'מי המציא את', 'מי גילה את'
+        ];
+        
+        if (definitionPatterns.some(pattern => questionText.includes(pattern))) {
+            // These questions are often problematic, so log them for review
+            console.log(`Potential definition question (review manually): "${q.question}" / "${q.answer}"`);
+        }
+        
+        // 5. NEW: Check for topic diversity by analyzing key terms in the question
+        // Extract potential topic indicators
+        const topicIndicators = [
+            // Main subject in the question is often at the beginning
+            words[0] + ' ' + (words[1] || ''),
+            // Or might be after common question words
+            words[2] + ' ' + (words[3] || ''),
+            // Or the answer itself might indicate the topic 
+            answerText
+        ];
+        
+        // Create a simplified topic signature
+        const topicSignature = topicIndicators.join(' ').substring(0, 10);
+        
+        // If we've seen a very similar topic signature, filter it out
+        if (topicCategories.has(topicSignature)) {
+            console.warn(`Filtering out question with similar topic: "${q.question}"`);
+            return false;
+        }
+        
+        // Add this topic to our Set
+        topicCategories.add(topicSignature);
+        
+        // Keep the question if it passed all checks
+        return true;
+    });
+}
+
 // Modified getUniqueQuestions to work with API-fetched questions
 function getUniqueQuestions(questionsFromApi, count = QUESTIONS_PER_GAME) {
     if (!questionsFromApi || questionsFromApi.length === 0) {
@@ -310,14 +404,68 @@ function getUniqueQuestions(questionsFromApi, count = QUESTIONS_PER_GAME) {
         const recencyScore = usedQuestionSets.length - gameIndex; // More recent = higher score
         questionRecencyMap[questionText] = Math.max(recencyScore, questionRecencyMap[questionText] || 0);
     });
+    
+    // Create a map to track topic similarities based on keywords
+    const topicSimilarityMap = new Map();
+    
+    // Extract keywords for each question to detect conceptual repetition
+    questionsFromApi.forEach(q => {
+        if (!q || !q.question) return;
+        
+        // Simple keyword extraction - remove common words and keep important terms
+        const keywords = q.question
+            .replace(/[.,?!:;""''־]/g, '')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .split(' ')
+            .filter(word => word.length > 2); // Only keep meaningful words
+            
+        // Add the answer as a key indicator of the topic
+        if (q.answer) {
+            keywords.push(q.answer.toLowerCase());
+        }
+        
+        // Store the keywords with the question
+        topicSimilarityMap.set(q.question, keywords);
+    });
+    
+    // Helper function to check if two questions are conceptually similar
+    const areConceptuallySimilar = (question1, question2) => {
+        const keywords1 = topicSimilarityMap.get(question1) || [];
+        const keywords2 = topicSimilarityMap.get(question2) || [];
+        
+        // Count how many keywords overlap
+        let matchCount = 0;
+        for (const word of keywords1) {
+            if (keywords2.includes(word)) {
+                matchCount++;
+            }
+        }
+        
+        // If more than 2 keywords match, consider them similar
+        return matchCount > 2;
+    };
 
-    // Filter out recently used questions
+    // Filter out recently used questions and conceptually similar ones
     let availableQuestions = questionsFromApi.filter(q => {
         if (!q || !q.question) return false;
-        // If it's not in history at all, keep it 
-        if (!questionRecencyMap[q.question]) return true;
+        
+        // If it's not in history at all, check for conceptual similarity with other recent questions
+        if (!questionRecencyMap[q.question]) {
+            // Check if this question is conceptually similar to any recently used question
+            for (const recentQuestion of recentlyUsedQuestionTexts.slice(-count * 3)) { // Check only the most recent games
+                if (areConceptuallySimilar(q.question, recentQuestion)) {
+                    console.log(`Filtering out conceptually similar question: "${q.question}" (similar to a recent question)`);
+                    return false;
+                }
+            }
+            return true;
+        }
+        
         // If it's been used in the last 2 games, filter it out
         if (questionRecencyMap[q.question] >= (usedQuestionSets.length - 1)) return false;
+        
         // Keep older questions
         return true;
     });
@@ -771,74 +919,6 @@ function quitGame() {
     
     // Refresh leaderboard when returning to home screen
     displayLeaderboard();
-}
-
-// Function to filter out bad questions that slipped through the API prompt
-function filterBadQuestions(questions) {
-    if (!questions || !Array.isArray(questions)) return [];
-    
-    return questions.filter(q => {
-        if (!q || !q.question || !q.answer) return false;
-        
-        // Strip punctuation and normalize Hebrew text
-        const normalizeHebrewText = (text) => {
-            return text.replace(/[.,?!:;""''־]/g, '')  // Remove common punctuation
-                      .replace(/\s+/g, ' ')           // Normalize whitespace
-                      .trim()                         // Trim leading/trailing spaces
-                      .toLowerCase();                 // Convert to lowercase
-        };
-        
-        const questionText = normalizeHebrewText(q.question);
-        const answerText = normalizeHebrewText(q.answer);
-        
-        // 1. Direct containment check
-        if (questionText.includes(answerText)) {
-            console.warn(`Filtering out bad question "${q.question}" - contains answer "${q.answer}"`);
-            return false;
-        }
-        
-        // 2. Check for singular form of plural answers (remove ים or ות ending)
-        if (answerText.endsWith('ים')) {
-            const singularForm = answerText.slice(0, -2);
-            if (singularForm.length > 1 && questionText.includes(singularForm)) {
-                console.warn(`Filtering out question with singular form match: "${q.question}" / "${q.answer}"`);
-                return false;
-            }
-        } else if (answerText.endsWith('ות')) {
-            const singularForm = answerText.slice(0, -2);
-            if (singularForm.length > 1 && questionText.includes(singularForm)) {
-                console.warn(`Filtering out question with singular form match: "${q.question}" / "${q.answer}"`);
-                return false;
-            }
-        }
-        
-        // 3. Check construct state (סמיכות) - common in Hebrew
-        // Examples: "מאיזה צמח מכינים שמן זית" - where זית appears in שמן זית
-        const words = questionText.split(' ');
-        for (let i = 0; i < words.length - 1; i++) {
-            const constructState = words[i] + ' ' + words[i+1];
-            if (constructState.includes(answerText) || 
-                (words[i+1] === answerText) ||
-                (answerText.length > 2 && words[i+1].includes(answerText))) {
-                console.warn(`Filtering out question with construct state containing answer: "${q.question}" / "${q.answer}"`);
-                return false;
-            }
-        }
-        
-        // 4. Check if the question is just asking for the name of something (definition questions)
-        const definitionPatterns = [
-            'מה שמו של', 'מה שמה של', 'איך קוראים ל', 'מהו השם של',
-            'מהו שמו של', 'מהו שמה של', 'מי המציא את', 'מי גילה את'
-        ];
-        
-        if (definitionPatterns.some(pattern => questionText.includes(pattern))) {
-            // These questions are often problematic, so log them for review
-            console.log(`Potential definition question (review manually): "${q.question}" / "${q.answer}"`);
-        }
-        
-        // Keep the question if it passed all checks
-        return true;
-    });
 }
 
 // Function to fetch questions from Netlify Function with improved error handling

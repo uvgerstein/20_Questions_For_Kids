@@ -3,8 +3,8 @@
 
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env; // Access the API key from Netlify's environment variables
-        // Updated API URL to use gemini-1.5-flash model which is more widely available and reliable
-        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
+        // Updated API URL to use gemini-2.5-flash model which is the latest version
+        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=';
 
         // Get count from query parameters
         const count = event.queryStringParameters && event.queryStringParameters.count
@@ -40,7 +40,8 @@ INSTRUCTIONS FOR 5-6 YEAR OLDS:
 - Keep answers to single words or very short phrases
 - Focus on things children can easily observe in their daily lives
 - Avoid abstract concepts entirely
-- Use familiar contexts like home, kindergarten, and family`;
+- Use familiar contexts like home, kindergarten, and family
+- Use concepts that are familiar to Israeli children at this age`;
         } else if (ageGroup === "7-8") {
             targetAge = "7-8";
             ageSpecificInstructions = `
@@ -51,7 +52,8 @@ INSTRUCTIONS FOR 7-8 YEAR OLDS:
 - Answers can be short phrases or simple sentences
 - Include some "why" and "how" questions that develop reasoning
 - Focus on concrete rather than abstract concepts
-- Introduce some simple historic facts and figures`;
+- Introduce some simple historic facts and figures
+- Include some Israeli-specific content appropriate for this age group`;
         } else if (ageGroup === "9-10") {
             targetAge = "9-10";
             ageSpecificInstructions = `
@@ -63,13 +65,14 @@ INSTRUCTIONS FOR 9-10 YEAR OLDS:
 - Include "what would happen if" type questions
 - Introduce more abstract concepts appropriate for this age
 - Include questions that require reasoning and critical thinking
-- Add some questions about current events (suitable for children)`;
+- Add some questions about current events (suitable for children)
+- Include Israeli culture, geography, and historical content`;
         }
 
         const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages ${targetAge}.
 
 GOAL:
-Create fun and thought-provoking questions that children can answer with one specific, correct response.
+Create fun, diverse, and thought-provoking questions that children can answer with one specific, correct response.
 
 AGE GUIDELINES:
 ${ageSpecificInstructions}
@@ -91,9 +94,11 @@ RULES:
 5. Each question must have one clear, non-obvious correct answer.
 6. Questions must require thinking—not guessing something obvious.
 7. Phrase all questions simply and clearly.
+8. NEVER REPEAT SIMILAR QUESTIONS OR CONCEPTS - each question should be about a completely different topic or subject.
+9. Ensure creative variety - don't ask multiple questions about the same topic.
 
 TOPIC VARIETY:
-Include a balanced mix of topics:
+Include a diverse mix of topics (make sure to cover ALL of these categories):
 - Animals and nature
 - Space and science
 - World geography
@@ -103,7 +108,13 @@ Include a balanced mix of topics:
 - Food and nutrition
 - Technology and transportation
 - Fun facts
-- Israeli culture and holidays (limit to about 25% of the questions)
+- Israeli culture and holidays
+- Basic math concepts appropriate for the age
+- Literature and stories familiar to Israeli children
+- Everyday objects and their uses
+- Human body and health
+- Environmental awareness
+- Seasons and weather
 
 GOOD EXAMPLES:
 [
@@ -148,6 +159,11 @@ ADDITIONAL EXAMPLES OF BAD QUESTIONS TO AVOID:
 - "איזה פרי משמש להכנת ריבת תותים?" (answer "תות" is part of "תותים")
 - "מי המציא את נורת החשמל?" (answer is implied from the definition)
 
+EXTREMELY IMPORTANT:
+1. Maximize diversity - EVERY question must be from a different domain/topic
+2. Avoid repetition - do not ask multiple questions about similar concepts
+3. Ensure creativity - push for wide-ranging, interesting questions
+
 FORMAT REQUIREMENTS:
 - Generate all ${count} questions FIRST, then review each one
 - For each question, verify the answer is NOT contained within the question text
@@ -163,15 +179,15 @@ FORMAT REQUIREMENTS:
                     }]
                 }],
                 generationConfig: {
-                    temperature: 0.7,
-                    topK: 1,
-                    topP: 1,
+                    temperature: 0.8, // Slightly increased for more diversity
+                    topK: 40,
+                    topP: 0.95,
                     maxOutputTokens: 2048,
                 }
             };
 
             // Log that we're sending a request for a specific age group
-            console.log(`Sending request to Gemini API for age group: ${ageGroup}`);
+            console.log(`Sending request to Gemini 2.5 Flash API for age group: ${ageGroup}`);
 
             const response = await fetch(fullApiUrl, {
                 method: 'POST',
