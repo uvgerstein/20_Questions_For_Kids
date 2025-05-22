@@ -6,9 +6,9 @@
         
         // Use gemini-1.5-pro as primary model with fallbacks
         const GEMINI_MODELS = [
-            'gemini-1.5-pro', // Most capable model currently available
-            'gemini-1.5-flash', // Faster alternative
-            'gemini-pro' // Older fallback option
+            'gemini-pro', // Start with older model that has higher quotas
+            'gemini-1.5-flash', // Try medium resource model second
+            'gemini-1.5-pro' // Try most resource-intensive model last
         ];
 
         // Get count from query parameters
@@ -184,18 +184,34 @@ FORMAT REQUIREMENTS:
                 
                 console.log(`Trying model: ${model} for age group: ${ageGroup}`);
                 
+                // Create generation config based on model capabilities
+                let generationConfig = {
+                    temperature: 0.8,
+                    topK: 40,
+                    topP: 0.95,
+                    maxOutputTokens: 2048,
+                };
+                
+                // Use different settings for different models to minimize quota usage
+                if (model === 'gemini-1.5-pro') {
+                    // For the most expensive model, use lower token counts
+                    generationConfig.maxOutputTokens = 1024;
+                    generationConfig.temperature = 0.7;
+                } else if (model === 'gemini-1.5-flash') {
+                    // Medium settings for flash
+                    generationConfig.maxOutputTokens = 1536;
+                } else {
+                    // Full token usage for the older model with higher quotas
+                    generationConfig.maxOutputTokens = 2048;
+                }
+                
                 const requestBody = {
                     contents: [{
                         parts: [{
                             text: promptText
                         }]
                     }],
-                    generationConfig: {
-                        temperature: 0.8, // Slightly increased for more diversity
-                        topK: 40,
-                        topP: 0.95,
-                        maxOutputTokens: 2048,
-                    }
+                    generationConfig: generationConfig
                 };
 
                 const response = await fetch(fullApiUrl, {
@@ -211,6 +227,23 @@ FORMAT REQUIREMENTS:
                 if (!response.ok) {
                     const errorBodyText = await response.text();
                     console.warn(`Model ${model} request failed:`, response.status, errorBodyText);
+                    
+                    // Special handling for quota and rate limit errors
+                    if (response.status === 429) {
+                        console.warn(`Rate limit or quota reached for model ${model}, trying next model`);
+                        
+                        // Try to parse the response to get retry-after information
+                        try {
+                            const errorObj = JSON.parse(errorBodyText);
+                            const retryDelay = errorObj?.error?.details?.find(d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo')?.retryDelay;
+                            if (retryDelay) {
+                                console.log(`API suggested retry delay: ${retryDelay}`);
+                            }
+                        } catch (e) {
+                            // Ignore parsing errors
+                        }
+                    }
+                    
                     lastError = { status: response.status, body: errorBodyText };
                     // Continue to the next model
                     continue;
