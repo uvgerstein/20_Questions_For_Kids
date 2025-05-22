@@ -7,7 +7,8 @@
         // Use available models with correct names in priority order
         const GEMINI_MODELS = [
             'gemini-1.5-flash', 
-            'gemini-1.5-pro'
+            'gemini-1.5-pro',
+            'gemini-pro'  // Add legacy model as last resort
         ];
 
         // Get count from query parameters
@@ -73,67 +74,24 @@ INSTRUCTIONS FOR 9-10 YEAR OLDS:
 - Include Israeli culture, geography, and historical content`;
         }
 
-        const promptText = `Generate ${count} high-quality, educational trivia questions in Hebrew for Israeli children ages ${targetAge}.
-
-GOAL:
-Create fun, diverse, and thought-provoking questions that children can answer with one specific, correct response.
+        // Adjust prompt to minimize token usage - critical when hitting quotas
+        const promptText = `Generate ${count} educational trivia questions in Hebrew for Israeli children ages ${targetAge}.
 
 AGE GUIDELINES:
 ${ageSpecificInstructions}
 
 FORMAT:
-Return a valid JSON array of ${count} objects, where each object has:
-- "question": a clear question in Hebrew
-- "answer": one specific, correct answer
-- "hint": a short clue that helps without giving the answer away
+Return a JSON array of ${count} objects, with "question", "answer", and "hint" fields.
 
 RULES:
-1. Do not include the answer in the question text.
-   Example to avoid: "מה שמה של בירת ישראל, ירושלים?"
-2. Avoid yes/no questions.
-   Example to avoid: "האם כדור הארץ עגול?"
-3. Avoid vague or multi-answer questions.
-   Example to avoid: "מה שמים בתוך פיתה?"
-4. Use Hebrew vocabulary appropriate for age ${targetAge}.
-5. Each question must have one clear, non-obvious correct answer.
-6. Questions must require thinking—not guessing something obvious.
-7. Phrase all questions simply and clearly.
-8. NEVER REPEAT SIMILAR QUESTIONS OR CONCEPTS - each question should be about a completely different topic or subject.
-9. Ensure creative variety - don't ask multiple questions about the same topic.
+1. Do not include answers in questions
+2. Avoid yes/no questions
+3. Ensure one clear answer per question
+4. Use age-appropriate vocabulary
+5. NEVER REPEAT similar questions
+6. Maximize topic diversity
 
-DIVERSITY REQUIREMENTS:
-- NO TWO QUESTIONS can be about the same topic or closely related topics
-- Ensure MAXIMUM TOPIC DIVERSITY - cover many different domains
-- Each question should require a completely different type of knowledge
-- Maintain wide conceptual distance between all questions
-- Vary the question patterns, structures, and types of answers required
-
-TOPIC VARIETY:
-Include a diverse mix of topics (make sure to cover as many of these categories as possible):
-- Animals and nature (but vary between different animals, environments, etc.)
-- Space and science (different scientific fields and discoveries)
-- World geography (different countries, landmarks, geographical features)
-- Famous people (Israeli and global, from different fields and time periods)
-- Arts and music (different art forms, instruments, and cultural expressions)
-- Sports and games (variety of activities and rules)
-- Food and nutrition (different cuisines, ingredients, and health facts)
-- Technology and transportation (various inventions, vehicles, and innovations)
-- Fun facts (unusual but educational trivia from diverse domains)
-- Israeli culture and holidays (different traditions, celebrations, and customs)
-- Basic math concepts appropriate for the age (variety of mathematical thinking)
-- Literature and stories familiar to Israeli children (diverse stories and authors)
-- Everyday objects and their uses (practical knowledge about different items)
-- Human body and health (various body systems and wellness topics)
-- Environmental awareness (different ecological concepts and conservation ideas)
-- Seasons and weather (varied climate phenomena and seasonal changes)
-
-REPETITION PREVENTION:
-- Do not ask about the same concept in different words
-- Avoid questions that have similar answers
-- Do not repeat question patterns (e.g., "what is the capital of X?" multiple times)
-- Ensure each question requires a different type of knowledge/thinking
-
-GOOD EXAMPLES:
+JSON FORMAT EXAMPLE:
 [
   {
     "question": "איזה חיה היא הגדולה ביותר בעולם?",
@@ -144,183 +102,209 @@ GOOD EXAMPLES:
     "question": "כמה רגליים יש לעכביש?",
     "answer": "שמונה",
     "hint": "מספר שבא אחרי שבע"
-  },
-  {
-    "question": "איזה כוכב לכת הוא הקרוב ביותר לשמש?",
-    "answer": "כוכב חמה",
-    "hint": "הכוכב החם ביותר במערכת השמש"
   }
-]
-
-BAD EXAMPLES (DO NOT CREATE):
-- "מה שמו של דגל ישראל?" (answer is in the question)
-- "איזה פרי גדל על עץ זית?" (answer is too obvious)
-- "מה שמים בתוך פיתה?" (too many possible answers)
-- "איזה צבע הים?" (too generic)
-- "האם חנוכה הוא חג יהודי?" (yes/no question)
-- "מה שם העיר שהיא בירת ישראל, ירושלים?" (answer is included)
-- "מה עוזר לנו לראות בחושך?" (obvious answer: אור)
-- "איזה ספורט משחקים עם כדור וסל?" (answer "כדורסל" contained in question)
-- "מה שמו של המאכל העשוי מחומוס, טחינה, שמן זית ותבלינים?" (contains ingredient "חומוס" in question)
-
-AVOID SELF-ANSWERING QUESTIONS:
-- Never include a term in the question that contains the answer
-- Avoid questions where the answer is directly described in the question
-- Don't use obvious definitions where naming the object is the answer
-- IMPORTANT: Never ask "מאיזה צמח מכינים שמן זית?" where the answer "זית" is part of "שמן זית"
-- CRITICAL: If the name of the item (answer) appears anywhere in the question, the question must be rejected
-
-ADDITIONAL EXAMPLES OF BAD QUESTIONS TO AVOID:
-- "מאיזה צמח מכינים שמן זית?" (answer "זית" is part of "שמן זית")
-- "מהו שמו של החג שבו מדליקים נרות בחנוכייה?" (answer "חנוכה" is part of "חנוכייה")
-- "איזה פרי משמש להכנת ריבת תותים?" (answer "תות" is part of "תותים")
-- "מי המציא את נורת החשמל?" (answer is implied from the definition)
-
-EXTREMELY IMPORTANT:
-1. Maximize diversity - EVERY question must be from a different domain/topic
-2. Avoid repetition - do not ask multiple questions about similar concepts
-3. Ensure creativity - push for wide-ranging, interesting questions
-
-FORMAT REQUIREMENTS:
-- Generate all ${count} questions FIRST, then review each one
-- For each question, verify the answer is NOT contained within the question text
-- If the question contains any part of the answer, REPLACE IT with a better question
-`;
+]`;
 
         // Try each model in succession until one works
         let lastError = null;
-        for (const model of GEMINI_MODELS) {
-            try {
-                const GEMINI_API_BASE_URL = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=`;
-                const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
-                
-                console.log(`Trying model: ${model} for age group: ${ageGroup}`);
-                
-                // Create generation config based on model capabilities
-                let generationConfig = {
-                    temperature: 0.9,
-                    topK: 80,
-                    topP: 0.95,
-                    maxOutputTokens: 2048,
-                };
-                
-                // Use different settings for different models to minimize quota usage
-                if (model === 'gemini-1.5-pro') {
-                    // For the most expensive model, use lower token counts
-                    generationConfig.maxOutputTokens = 1024;
-                    generationConfig.temperature = 0.85;
-                } else if (model === 'gemini-1.5-flash') {
-                    // Medium settings for flash
-                    generationConfig.maxOutputTokens = 1536;
-                    generationConfig.temperature = 0.9;
-                }
-                
-                const requestBody = {
-                    contents: [{
-                        parts: [{
-                            text: promptText
-                        }]
-                    }],
-                    generationConfig: generationConfig
-                };
-
-                const response = await fetch(fullApiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(requestBody),
-                    // Add timeout to prevent long-running requests
-                    timeout: 25000 // 25 second timeout
-                });
-
-                if (!response.ok) {
-                    const errorBodyText = await response.text();
-                    console.warn(`Model ${model} request failed:`, response.status, errorBodyText);
+        const retryDelays = [1000, 2000, 4000]; // Progressively longer delays for retries within same model
+        
+        modelLoop: for (const model of GEMINI_MODELS) {
+            // Try each model with multiple retries using exponential backoff
+            for (let retryCount = 0; retryCount <= retryDelays.length; retryCount++) {
+                try {
+                    // If this isn't the first attempt, wait before retrying
+                    if (retryCount > 0) {
+                        const delay = retryDelays[retryCount - 1];
+                        console.log(`Retry #${retryCount} for ${model} after ${delay}ms delay`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
                     
-                    // Special handling for quota and rate limit errors
-                    if (response.status === 429) {
-                        console.warn(`Rate limit or quota reached for model ${model}, trying next model`);
+                    const GEMINI_API_BASE_URL = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=`;
+                    const fullApiUrl = `${GEMINI_API_BASE_URL}${GEMINI_API_KEY}`;
+                    
+                    console.log(`Trying model: ${model} for age group: ${ageGroup}`);
+                    
+                    // Create generation config based on model capabilities
+                    let generationConfig = {
+                        temperature: 0.9,
+                        topK: 80,
+                        topP: 0.95,
+                        maxOutputTokens: 1024, // Reduced token count to conserve quota
+                    };
+                    
+                    // Use different settings to reduce token usage and quota consumption
+                    if (model === 'gemini-pro') {
+                        // Legacy model uses fewer tokens
+                        generationConfig.maxOutputTokens = 800;
+                        generationConfig.temperature = 0.8;
+                    } else if (model === 'gemini-1.5-pro') {
+                        // Pro model - keep tokens minimal
+                        generationConfig.maxOutputTokens = 900;
+                        generationConfig.temperature = 0.85;
+                    } else if (model === 'gemini-1.5-flash') {
+                        // Flash model - slightly more tokens but still conservative
+                        generationConfig.maxOutputTokens = 1024;
+                        generationConfig.temperature = 0.9;
+                    }
+                    
+                    const requestBody = {
+                        contents: [{
+                            parts: [{
+                                text: promptText
+                            }]
+                        }],
+                        generationConfig: generationConfig
+                    };
+
+                    const response = await fetch(fullApiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(requestBody),
+                        // Shorter timeout to avoid long-running requests
+                        timeout: 20000 // 20 second timeout
+                    });
+
+                    if (!response.ok) {
+                        const errorBodyText = await response.text();
+                        console.warn(`Model ${model} request failed:`, response.status, errorBodyText);
                         
-                        // Try to parse the response to get retry-after information
+                        // Try to parse the error response
+                        let retryAfterMs = 0;
                         try {
                             const errorObj = JSON.parse(errorBodyText);
-                            const retryDelay = errorObj?.error?.details?.find(d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo')?.retryDelay;
-                            if (retryDelay) {
-                                console.log(`API suggested retry delay: ${retryDelay}`);
+                            
+                            // Check for specific error types
+                            if (response.status === 429) { // Rate limit
+                                console.warn(`Rate limit or quota reached for model ${model}`);
+                                
+                                // See if we should try retrying this model or move to next
+                                const quotaError = errorObj?.error?.details?.find(
+                                    d => d['@type'] === 'type.googleapis.com/google.rpc.QuotaFailure'
+                                );
+                                
+                                // If it's a quota issue, move to next model immediately
+                                if (quotaError) {
+                                    console.warn(`Quota exceeded for ${model}, moving to next model`);
+                                    lastError = { status: response.status, body: errorBodyText };
+                                    continue modelLoop;
+                                }
+                                
+                                // Extract retry delay if present
+                                const retryInfo = errorObj?.error?.details?.find(
+                                    d => d['@type'] === 'type.googleapis.com/google.rpc.RetryInfo'
+                                );
+                                
+                                if (retryInfo?.retryDelay) {
+                                    // Parse the retry delay value (format might be like "13s")
+                                    const delayStr = retryInfo.retryDelay;
+                                    const delayNum = parseInt(delayStr.replace(/[^0-9]/g, ''));
+                                    
+                                    if (!isNaN(delayNum)) {
+                                        // Convert to milliseconds if it's in seconds
+                                        retryAfterMs = delayStr.includes('s') ? delayNum * 1000 : delayNum;
+                                        console.log(`API suggested retry delay: ${retryAfterMs}ms`);
+                                    }
+                                }
+                            } else if (response.status === 503) { // Service unavailable
+                                console.warn(`Model ${model} is overloaded, will retry with exponential backoff`);
                             }
                         } catch (e) {
                             // Ignore parsing errors
+                            console.warn("Could not parse error response:", e);
                         }
+                        
+                        lastError = { status: response.status, body: errorBodyText };
+                        
+                        // If API gave us a specific retry time, use that instead of our backoff
+                        if (retryAfterMs > 0 && retryCount < retryDelays.length) {
+                            console.log(`Waiting ${retryAfterMs}ms before retrying ${model} as suggested by API`);
+                            await new Promise(resolve => setTimeout(resolve, retryAfterMs));
+                            // Don't increment retryCount, just try again
+                            retryCount--;
+                            continue;
+                        }
+                        
+                        // If we've exhausted retries for this model, move to next one
+                        if (retryCount >= retryDelays.length) {
+                            console.warn(`Maximum retries (${retryDelays.length}) reached for model ${model}, trying next model`);
+                            continue modelLoop;
+                        }
+                        
+                        // Otherwise continue to next retry iteration
+                        continue;
                     }
-                    
-                    lastError = { status: response.status, body: errorBodyText };
-                    // Continue to the next model
-                    continue;
-                }
 
-                const data = await response.json();
-                let questionsJsonString;
+                    const data = await response.json();
+                    let questionsJsonString;
 
-                // Extract the generated text from the model's response
-                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
-                    questionsJsonString = data.candidates[0].content.parts[0].text;
-                } else {
-                    console.warn(`Unexpected response structure from model ${model}:`, JSON.stringify(data, null, 2));
-                    // Continue to the next model
-                    continue;
-                }
-
-                // Remove potential markdown code block fences if the API returns them
-                questionsJsonString = questionsJsonString.replace(/^```json\n?/, '').replace(/\n?```$/, '');
-
-                // Log that we received a successful response
-                console.log(`Successfully generated ${count} questions using ${model} for age group ${ageGroup}`);
-
-                try {
-                    // Parse the JSON string to validate it
-                    const parsedQuestions = JSON.parse(questionsJsonString);
-                    if (!Array.isArray(parsedQuestions)) {
-                        throw new Error("Response is not a valid array");
+                    // Extract the generated text from the model's response
+                    if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text) {
+                        questionsJsonString = data.candidates[0].content.parts[0].text;
+                    } else {
+                        console.warn(`Unexpected response structure from model ${model}:`, JSON.stringify(data, null, 2));
+                        // Try next retry
+                        continue;
                     }
+
+                    // Remove potential markdown code block fences if the API returns them
+                    questionsJsonString = questionsJsonString.replace(/^```json\n?/, '').replace(/\n?```$/, '');
+
+                    // Log that we received a successful response
+                    console.log(`Successfully generated ${count} questions using ${model} for age group ${ageGroup}`);
+
+                    try {
+                        // Parse the JSON string to validate it
+                        const parsedQuestions = JSON.parse(questionsJsonString);
+                        if (!Array.isArray(parsedQuestions)) {
+                            throw new Error("Response is not a valid array");
+                        }
+                        
+                        // Add signature tracking for question diversity
+                        parsedQuestions.forEach(q => {
+                            // Create a simplified signature from the question to track for repeats
+                            q.signature = q.question
+                                .replace(/[.,?!;:'"()\[\]{}]/g, '') // Remove punctuation
+                                .toLowerCase()
+                                .split(' ')
+                                .filter(word => word.length > 3) // Keep only meaningful words
+                                .sort()
+                                .join('|'); // Create a sorted signature
+                        });
+                        
+                        console.log(`✓ SUCCESS: Generated ${parsedQuestions.length} unique questions for age group ${ageGroup}`);
+                        
+                        // Return the valid JSON string with metadata
+                        return {
+                            statusCode: 200,
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                questions: parsedQuestions,
+                                meta: {
+                                    source: 'generated',
+                                    model: model,
+                                    ageGroup: ageGroup,
+                                    timestamp: new Date().toISOString()
+                                }
+                            }),
+                        };
+                    } catch (parseError) {
+                        console.warn(`Failed to parse ${model} response as JSON:`, parseError);
+                        // Continue with next retry
+                        continue;
+                    }
+                } catch (modelError) {
+                    console.warn(`Error with model ${model} (attempt ${retryCount+1}):`, modelError);
+                    lastError = modelError;
                     
-                    // Add signature tracking for question diversity
-                    parsedQuestions.forEach(q => {
-                        // Create a simplified signature from the question to track for repeats
-                        q.signature = q.question
-                            .replace(/[.,?!;:'"()\[\]{}]/g, '') // Remove punctuation
-                            .toLowerCase()
-                            .split(' ')
-                            .filter(word => word.length > 3) // Keep only meaningful words
-                            .sort()
-                            .join('|'); // Create a sorted signature
-                    });
-                    
-                    console.log(`✓ SUCCESS: Generated ${parsedQuestions.length} unique questions for age group ${ageGroup}`);
-                    
-                    // Return the valid JSON string with metadata
-                    return {
-                        statusCode: 200,
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            questions: parsedQuestions,
-                            meta: {
-                                source: 'generated',
-                                model: model,
-                                ageGroup: ageGroup,
-                                timestamp: new Date().toISOString()
-                            }
-                        }),
-                    };
-                } catch (parseError) {
-                    console.warn(`Failed to parse ${model} response as JSON:`, parseError);
-                    // Continue to the next model
-                    continue;
+                    // If this is a network or timeout error, retry with backoff
+                    // If we've exhausted retries, move to next model
+                    if (retryCount >= retryDelays.length) {
+                        continue modelLoop;
+                    }
                 }
-            } catch (modelError) {
-                console.warn(`Error with model ${model}:`, modelError);
-                lastError = modelError;
-                // Continue to the next model
             }
         }
         
@@ -341,7 +325,7 @@ FORMAT REQUIREMENTS:
                     source: 'fallback',
                     ageGroup: ageGroup,
                     timestamp: new Date().toISOString(),
-                    reason: lastError ? `API error: ${lastError.status}` : 'API key missing'
+                    reason: lastError ? `API error: ${lastError.status || 'unknown'}` : 'API key missing'
                 }
             }),
         };
