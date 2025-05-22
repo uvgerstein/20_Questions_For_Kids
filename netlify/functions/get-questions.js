@@ -101,24 +101,37 @@ RULES:
 8. NEVER REPEAT SIMILAR QUESTIONS OR CONCEPTS - each question should be about a completely different topic or subject.
 9. Ensure creative variety - don't ask multiple questions about the same topic.
 
+DIVERSITY REQUIREMENTS:
+- NO TWO QUESTIONS can be about the same topic or closely related topics
+- Ensure MAXIMUM TOPIC DIVERSITY - cover many different domains
+- Each question should require a completely different type of knowledge
+- Maintain wide conceptual distance between all questions
+- Vary the question patterns, structures, and types of answers required
+
 TOPIC VARIETY:
-Include a diverse mix of topics (make sure to cover ALL of these categories):
-- Animals and nature
-- Space and science
-- World geography
-- Famous people (Israeli and global)
-- Arts and music
-- Sports and games
-- Food and nutrition
-- Technology and transportation
-- Fun facts
-- Israeli culture and holidays
-- Basic math concepts appropriate for the age
-- Literature and stories familiar to Israeli children
-- Everyday objects and their uses
-- Human body and health
-- Environmental awareness
-- Seasons and weather
+Include a diverse mix of topics (make sure to cover as many of these categories as possible):
+- Animals and nature (but vary between different animals, environments, etc.)
+- Space and science (different scientific fields and discoveries)
+- World geography (different countries, landmarks, geographical features)
+- Famous people (Israeli and global, from different fields and time periods)
+- Arts and music (different art forms, instruments, and cultural expressions)
+- Sports and games (variety of activities and rules)
+- Food and nutrition (different cuisines, ingredients, and health facts)
+- Technology and transportation (various inventions, vehicles, and innovations)
+- Fun facts (unusual but educational trivia from diverse domains)
+- Israeli culture and holidays (different traditions, celebrations, and customs)
+- Basic math concepts appropriate for the age (variety of mathematical thinking)
+- Literature and stories familiar to Israeli children (diverse stories and authors)
+- Everyday objects and their uses (practical knowledge about different items)
+- Human body and health (various body systems and wellness topics)
+- Environmental awareness (different ecological concepts and conservation ideas)
+- Seasons and weather (varied climate phenomena and seasonal changes)
+
+REPETITION PREVENTION:
+- Do not ask about the same concept in different words
+- Avoid questions that have similar answers
+- Do not repeat question patterns (e.g., "what is the capital of X?" multiple times)
+- Ensure each question requires a different type of knowledge/thinking
 
 GOOD EXAMPLES:
 [
@@ -185,8 +198,8 @@ FORMAT REQUIREMENTS:
                 
                 // Create generation config based on model capabilities
                 let generationConfig = {
-                    temperature: 0.8,
-                    topK: 40,
+                    temperature: 0.9,
+                    topK: 80,
                     topP: 0.95,
                     maxOutputTokens: 2048,
                 };
@@ -195,13 +208,11 @@ FORMAT REQUIREMENTS:
                 if (model === 'gemini-1.5-pro') {
                     // For the most expensive model, use lower token counts
                     generationConfig.maxOutputTokens = 1024;
-                    generationConfig.temperature = 0.7;
+                    generationConfig.temperature = 0.85;
                 } else if (model === 'gemini-1.5-flash') {
                     // Medium settings for flash
                     generationConfig.maxOutputTokens = 1536;
-                } else {
-                    // Full token usage for the older model with higher quotas
-                    generationConfig.maxOutputTokens = 2048;
+                    generationConfig.temperature = 0.9;
                 }
                 
                 const requestBody = {
@@ -273,11 +284,25 @@ FORMAT REQUIREMENTS:
                         throw new Error("Response is not a valid array");
                     }
                     
+                    // Add signature tracking for question diversity
+                    parsedQuestions.forEach(q => {
+                        // Create a simplified signature from the question to track for repeats
+                        q.signature = q.question
+                            .replace(/[.,?!;:'"()\[\]{}]/g, '') // Remove punctuation
+                            .toLowerCase()
+                            .split(' ')
+                            .filter(word => word.length > 3) // Keep only meaningful words
+                            .sort()
+                            .join('|'); // Create a sorted signature
+                    });
+                    
+                    console.log(`✓ SUCCESS: Generated ${parsedQuestions.length} unique questions for age group ${ageGroup}`);
+                    
                     // Return the valid JSON string
                     return {
                         statusCode: 200,
                         headers: { 'Content-Type': 'application/json' },
-                        body: questionsJsonString, // Send the string directly
+                        body: JSON.stringify(parsedQuestions), // Send the parsed and enhanced questions
                     };
                 } catch (parseError) {
                     console.warn(`Failed to parse ${model} response as JSON:`, parseError);
@@ -295,9 +320,12 @@ FORMAT REQUIREMENTS:
         console.error('All Gemini models failed to generate questions.', lastError);
         
         // Return fallback questions instead of an error
+        console.log('⚠️ FALLBACK: Using pre-defined fallback questions for age group', ageGroup);
+        const fallbackQuestionsJson = getFallbackQuestions(ageGroup, count);
+        
         return {
             statusCode: 200,
-            body: getFallbackQuestions(ageGroup, count),
+            body: fallbackQuestionsJson,
             headers: { 'Content-Type': 'application/json' },
         };
     };
@@ -319,7 +347,16 @@ FORMAT REQUIREMENTS:
                 { question: "איזה פרי צהוב וארוך?", answer: "בננה", hint: "קוף אוהב לאכול אותו." },
                 { question: "מה הצבע של העשב?", answer: "ירוק", hint: "הצבע של העלים בעצים." },
                 { question: "מאיזה צבע הלימון?", answer: "צהוב", hint: "הצבע של השמש." },
-                { question: "איזו חיה נותנת לנו חלב?", answer: "פרה", hint: "חיה שאומרת מו." }
+                { question: "איזו חיה נותנת לנו חלב?", answer: "פרה", hint: "חיה שאומרת מו." },
+                // Adding more varied questions
+                { question: "איזה כלי נגינה יש לו מיתרים?", answer: "גיטרה", hint: "מנגנים עליו עם האצבעות." },
+                { question: "איזה צורה יש למגן דוד?", answer: "כוכב", hint: "יש לו שישה קודקודים." },
+                { question: "מה בא אחרי היום?", answer: "לילה", hint: "כשחשוך בחוץ." },
+                { question: "כמה אצבעות יש לנו בשתי הידיים יחד?", answer: "עשר", hint: "חמש ועוד חמש." },
+                { question: "מי מלמד בבית הספר?", answer: "מורה", hint: "האדם שעומד ליד הלוח." },
+                { question: "איזה חיה יודעת לעוף?", answer: "ציפור", hint: "יש לה כנפיים." },
+                { question: "כמה עונות יש בשנה?", answer: "ארבע", hint: "קיץ, סתיו, חורף ו..." },
+                { question: "מה צומח על עצים?", answer: "פירות", hint: "אוכלים אותם וטעימים." }
             ];
         } else if (ageGroup === "7-8") {
             fallbackQuestions = [
@@ -334,7 +371,16 @@ FORMAT REQUIREMENTS:
                 { question: "באיזה חג אוכלים מצות?", answer: "פסח", hint: "חג האביב וחג החירות." },
                 { question: "מה החג הראשון בשנה העברית?", answer: "ראש השנה", hint: "אוכלים בו תפוח בדבש." },
                 { question: "מה הוא כוכב הלכת הקרוב ביותר לשמש?", answer: "כוכב חמה", hint: "הכוכב החם ביותר." },
-                { question: "כמה רגליים יש לעכביש?", answer: "שמונה", hint: "יותר מחרק רגיל." }
+                { question: "כמה רגליים יש לעכביש?", answer: "שמונה", hint: "יותר מחרק רגיל." },
+                // Adding more varied questions
+                { question: "מה תפקידו של הלב בגוף?", answer: "להזרים דם", hint: "הוא פועם כל הזמן." },
+                { question: "איזה יבשת היא הגדולה ביותר?", answer: "אסיה", hint: "סין והודו נמצאות שם." },
+                { question: "מי המציא את הטלפון?", answer: "אלכסנדר גרהם בל", hint: "המצאה מלפני כ-150 שנה." },
+                { question: "מי כתב את הספר 'הארי פוטר'?", answer: "ג'יי קיי רולינג", hint: "סופרת בריטית." },
+                { question: "איזה חומר עשוי מחול?", answer: "זכוכית", hint: "שקוף ושביר." },
+                { question: "מה שמו של הים בין ישראל למצרים?", answer: "ים סוף", hint: "ים עם שונית אלמוגים." },
+                { question: "מה המספר הגדול ביותר בלוח הכפל?", answer: "מאה", hint: "עשר כפול עשר." },
+                { question: "באיזה אמצעי תחבורה משתמשים לטיסה לחלל?", answer: "חללית", hint: "כלי שטס מעבר לאטמוספרה." }
             ];
         } else {
             fallbackQuestions = [
@@ -349,10 +395,33 @@ FORMAT REQUIREMENTS:
                 { question: "מה המספר האטומי של מימן?", answer: "אחד", hint: "המספר הראשון." },
                 { question: "מה שמו של הים המלוח ביותר בעולם?", answer: "ים המלח", hint: "נמצא בישראל ובירדן." },
                 { question: "איזה אלמנט הוא הנפוץ ביותר ביקום?", answer: "מימן", hint: "החומר שממנו עשויים כוכבים." },
-                { question: "מי היה מנהיג תנועת אי-האלימות בהודו?", answer: "מהטמה גנדי", hint: "הוביל את מאבק העצמאות של הודו." }
+                { question: "מי היה מנהיג תנועת אי-האלימות בהודו?", answer: "מהטמה גנדי", hint: "הוביל את מאבק העצמאות של הודו." },
+                // Adding more varied questions
+                { question: "מהי הנוסחה הכימית של מים?", answer: "H2O", hint: "שני מימנים ואחד חמצן." },
+                { question: "מיהו הצייר שצייר את המונה ליזה?", answer: "לאונרדו דה וינצ'י", hint: "ממציא וצייר איטלקי מהרנסאנס." },
+                { question: "איזה מטבע משתמשים ברוב מדינות אירופה?", answer: "אירו", hint: "מטבע משותף לאיחוד האירופאי." },
+                { question: "איזה כלי נגינה יש לו 88 מקשים?", answer: "פסנתר", hint: "כלי נגינה קלאסי עם מקשים שחורים ולבנים." },
+                { question: "באיזה שנה הוקמה מדינת ישראל?", answer: "1948", hint: "לפני יותר מ-70 שנה." },
+                { question: "מה תפקיד הכלורופיל בצמחים?", answer: "לבצע פוטוסינתזה", hint: "החומר שנותן לצמחים את הצבע הירוק." },
+                { question: "מהי היחידה הבסיסית של תורשה?", answer: "גן", hint: "מכיל מידע גנטי שעובר מהורים לילדים." },
+                { question: "איזה חומר משמש כדלק בתחנות כוח גרעיניות?", answer: "אורניום", hint: "יסוד רדיואקטיבי." }
             ];
         }
         
         // Ensure we return the requested count of questions (or all available if less)
-        return JSON.stringify(fallbackQuestions.slice(0, count));
+        // Shuffle the array to ensure variety
+        const shuffled = fallbackQuestions.sort(() => 0.5 - Math.random());
+        
+        // Add signature to each question for tracking
+        shuffled.forEach(q => {
+            q.signature = q.question
+                .replace(/[.,?!;:'"()\[\]{}]/g, '') // Remove punctuation
+                .toLowerCase()
+                .split(' ')
+                .filter(word => word.length > 3) // Keep only meaningful words
+                .sort()
+                .join('|'); // Create a sorted signature
+        });
+        
+        return JSON.stringify(shuffled.slice(0, count));
     }
