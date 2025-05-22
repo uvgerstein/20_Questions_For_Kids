@@ -4,11 +4,10 @@
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env; // Access the API key from Netlify's environment variables
         
-        // Use gemini-1.5-pro as primary model with fallbacks
+        // Use available models with correct names in priority order
         const GEMINI_MODELS = [
-            'gemini-pro', // Start with older model that has higher quotas
-            'gemini-1.5-flash', // Try medium resource model second
-            'gemini-1.5-pro' // Try most resource-intensive model last
+            'gemini-1.5-flash', 
+            'gemini-1.5-pro'
         ];
 
         // Get count from query parameters
