@@ -1016,18 +1016,25 @@ function displayLeaderboard() {
         return;
     }
     
-    // Take top entries ordered by timestamp (most recent first)
+    // Take top entries ordered by score (highest first), then by timestamp (most recent first if tied)
     // Limited to MAX_LEADERBOARD_ENTRIES
     const displayEntries = leaderboardData
-        .sort((a, b) => b.timestamp - a.timestamp)
+        .sort((a, b) => {
+            // First sort by score (highest first)
+            if (b.score !== a.score) {
+                return b.score - a.score;
+            }
+            // If scores are tied, sort by most recent
+            return b.timestamp - a.timestamp;
+        })
         .slice(0, MAX_LEADERBOARD_ENTRIES);
     
     // Add each entry to the table
     displayEntries.forEach((entry, index) => {
         const row = document.createElement('tr');
         
-        // Highlight the most recent entry
-        if (index === 0 && entry.timestamp > Date.now() - 60000) { // If added in the last minute
+        // Highlight new entries (added in the last minute)
+        if (entry.timestamp > Date.now() - 60000) {
             row.classList.add('new-record');
         }
         

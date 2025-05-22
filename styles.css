@@ -878,4 +878,14 @@ th.avatar-column {
 /* Continue button style update */
 #confirm-user-btn {
     margin-bottom: 10px;
+}
+
+/* Highlight top scorer in gold */
+#leaderboard-table tbody tr:first-child {
+    background-color: rgba(255, 215, 0, 0.2) !important; /* Gold with transparency */
+}
+
+#leaderboard-table tbody tr:first-child td {
+    font-weight: bold;
+    border-bottom: 2px solid gold;
 } 
