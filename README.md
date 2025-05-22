@@ -51,4 +51,58 @@
 
 ## רישיון
 
-חופשי לשימוש. נשמח לקרדיט. 
+חופשי לשימוש. נשמח לקרדיט.
+
+## Deployment Instructions
+
+### Deploying to Netlify
+
+1. Create a Netlify account if you don't have one: https://app.netlify.com/signup
+
+2. Create a new site from Git:
+   - Go to https://app.netlify.com/start
+   - Select your Git provider (GitHub, GitLab, BitBucket)
+   - Select your repository
+   - Use these build settings:
+     - Build command: `npm install` (or leave blank)
+     - Publish directory: `.` (the root directory)
+
+3. Set up environment variables:
+   - In your Netlify site dashboard, go to Site settings > Environment variables
+   - Add a new variable:
+     - Key: `GEMINI_API_KEY`
+     - Value: Your Google Gemini API key (get one from https://ai.google.dev/)
+
+4. Deploy the site
+
+### Local Development
+
+1. Install dependencies:
+   ```
+   npm install
+   ```
+
+2. Create a `.env` file in the root directory with your Gemini API key:
+   ```
+   GEMINI_API_KEY=your_api_key_here
+   ```
+
+3. To test Netlify Functions locally, install the Netlify CLI:
+   ```
+   npm install -g netlify-cli
+   ```
+
+4. Run the development server:
+   ```
+   netlify dev
+   ```
+
+This will start a local server that simulates the Netlify Functions environment.
+
+### Troubleshooting
+
+If you're experiencing issues with the Netlify function:
+
+1. Check the function logs in the Netlify dashboard (Functions > get-questions > Logs)
+2. Verify your API key is correctly set in the environment variables
+3. The function now includes fallback questions that will be used if the API call fails 

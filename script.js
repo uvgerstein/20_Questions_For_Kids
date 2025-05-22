@@ -795,7 +795,7 @@ function filterBadQuestions(questions) {
     });
 }
 
-// NEW: Function to fetch questions from your Netlify Function
+// Function to fetch questions from Netlify Function with improved error handling
 async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) {
     // Determine age group for question complexity
     let ageGroup = "5-6"; // default age group
@@ -810,64 +810,113 @@ async function fetchQuestionsFromGeminiAPI(count = QUESTIONS_PER_GAME, age = 6) 
     // Request more questions than needed to give us a buffer for filtering
     const requestCount = Math.min(count * 3, 30); // Ask for up to 3x questions (max 30)
     
-    // The URL now points to your Netlify Function.
-    // We pass the desired count and age group as query parameters.
+    // Try both URLs - first the Netlify function URL, then fallback to our serverless function
     const netlifyFunctionUrl = `/.netlify/functions/get-questions?count=${requestCount}&ageGroup=${ageGroup}`;
+    const fallbackFunctionUrl = `/api/get-questions?count=${requestCount}&ageGroup=${ageGroup}`;
     
     console.log(`Fetching ${requestCount} questions for age group: ${ageGroup}`);
 
     try {
-        const response = await fetch(netlifyFunctionUrl);
-
-        if (!response.ok) {
-            // Try to parse error response from our Netlify function, which should be JSON
-            let errorData;
-            try {
-                errorData = await response.json();
-            } catch (e) {
-                // If error response isn't JSON, use text
-                errorData = { error: await response.text() };
-            }
-            console.error('Netlify function request failed:', response.status, errorData);
-            throw new Error(`Failed to fetch questions: ${errorData.error || response.statusText}`);
+        // Try Netlify function first
+        let response;
+        try {
+            response = await fetch(netlifyFunctionUrl, {
+                // Add timeout to prevent long waiting
+                signal: AbortSignal.timeout(15000) // 15-second timeout
+            });
+        } catch (netlifyError) {
+            console.warn('Error with Netlify function, trying fallback URL:', netlifyError);
+            // If Netlify function fails, try the fallback URL
+            response = await fetch(fallbackFunctionUrl, {
+                signal: AbortSignal.timeout(15000) // 15-second timeout 
+            });
         }
 
-        // The Netlify function's body is expected to be a JSON string
-        // containing the array of questions.
+        if (!response.ok) {
+            // Log the error but don't throw - we'll use fallback questions
+            console.warn('Function request failed with status:', response.status);
+            // Use fallback questions instead
+            return getFallbackQuestions(ageGroup, count);
+        }
+
+        // Parse the response text as JSON
         const questionsJsonString = await response.text();
-        const questions = JSON.parse(questionsJsonString);
+        let questions;
+        try {
+            questions = JSON.parse(questionsJsonString);
+        } catch (parseError) {
+            console.error("Failed to parse response as JSON:", parseError);
+            return getFallbackQuestions(ageGroup, count);
+        }
 
         if (!Array.isArray(questions) || !questions.every(q => q.question && q.answer)) {
-            console.error("Parsed questions from Netlify function are not in the expected format:", questions);
-            throw new Error("Formatted questions from server are invalid.");
+            console.error("Parsed questions are not in the expected format:", questions);
+            return getFallbackQuestions(ageGroup, count);
         }
         
         // Apply client-side filtering to catch any bad questions
         const filteredQuestions = filterBadQuestions(questions);
         console.log(`Filtered out ${questions.length - filteredQuestions.length} bad questions`);
         
-        // The Netlify function should already slice to count, but we can be defensive
+        // Return the requested number of questions
         return filteredQuestions.slice(0, count);
 
     } catch (error) {
-        console.error('Error fetching questions from Netlify function:', error);
-        alert('Could not load questions. Using sample questions. Error: ' + error.message);
-        // Fallback to default questions - adjust based on age group
-        if (ageGroup === "5-6") {
-            return [
-                { question: "Fallback: איזו חיה אומרת 'מיאו'?", answer: "חתול", hint: "חיית מחמד פופולרית." },
-                { question: "Fallback: איזה צבע השמיים ביום בהיר?", answer: "כחול", hint: "צבע חשוב בדגל ישראל." }
-            ].slice(0, count);
-        } else if (ageGroup === "7-8") {
-            return [
-                { question: "Fallback: מה בירת צרפת?", answer: "פריז", hint: "יש בה מגדל מפורסם." },
-                { question: "Fallback: איזו חיה היא מלך החיות?", answer: "אריה", hint: "יש לו רעמה גדולה." }
-            ].slice(0, count);
-        } else {
-            return [
-                { question: "Fallback: כמה יבשות יש בעולם?", answer: "שבע", hint: "אסיה, אפריקה, אמריקה הצפונית, אמריקה הדרומית, אנטארקטיקה, אירופה, ואוסטרליה." },
-                { question: "Fallback: מי המציא את נורת החשמל?", answer: "תומאס אדיסון", hint: "ממציא אמריקאי מפורסם." }
-            ].slice(0, count);
-        }
+        console.error('Error fetching questions:', error);
+        return getFallbackQuestions(ageGroup, count);
     }
+}
+
+// Get local fallback questions by age group
+function getFallbackQuestions(ageGroup, count) {
+    let fallbackQuestions = [];
+    
+    if (ageGroup === "5-6") {
+        fallbackQuestions = [
+            { question: "איזו חיה אומרת 'מיאו'?", answer: "חתול", hint: "חיית מחמד פופולרית." },
+            { question: "איזה צבע השמיים ביום בהיר?", answer: "כחול", hint: "צבע חשוב בדגל ישראל." },
+            { question: "מה האות הראשונה בא-ב?", answer: "א", hint: "האות הראשונה באלפבית." },
+            { question: "איזה צבע העגבנייה הבשלה?", answer: "אדום", hint: "הצבע של אש." },
+            { question: "איזו חיה אוהבת לאכול גזר?", answer: "ארנב", hint: "חיה עם אוזניים ארוכות." },
+            { question: "כמה ימים יש בשבוע?", answer: "שבעה", hint: "אחרי שישה מגיע..." },
+            { question: "איזה חג מדליקים בו נרות במשך שמונה ימים?", answer: "חנוכה", hint: "חוגגים בחורף עם סופגניות." },
+            { question: "איזו חיה היא מלכת החיות?", answer: "אריה", hint: "חיה עם רעמה גדולה." },
+            { question: "איזה פרי צהוב וארוך?", answer: "בננה", hint: "קוף אוהב לאכול אותו." },
+            { question: "מה הצבע של העשב?", answer: "ירוק", hint: "הצבע של העלים בעצים." },
+            { question: "מאיזה צבע הלימון?", answer: "צהוב", hint: "הצבע של השמש." },
+            { question: "איזו חיה נותנת לנו חלב?", answer: "פרה", hint: "חיה שאומרת מו." }
+        ];
+    } else if (ageGroup === "7-8") {
+        fallbackQuestions = [
+            { question: "מה בירת צרפת?", answer: "פריז", hint: "יש בה מגדל מפורסם." },
+            { question: "איזו חיה היא מלך החיות?", answer: "אריה", hint: "יש לו רעמה גדולה." },
+            { question: "כמה צבעים יש בקשת?", answer: "שבעה", hint: "כמו מספר ימי השבוע." },
+            { question: "מה שם ההר הגבוה בעולם?", answer: "אוורסט", hint: "נמצא בהימלאיה." },
+            { question: "איזו חיה יש לה החדק הכי ארוך?", answer: "פיל", hint: "החיה היבשתית הגדולה ביותר." },
+            { question: "באיזה חג מתחפשים?", answer: "פורים", hint: "אוכלים בו אוזני המן." },
+            { question: "מה הצבע שמתקבל כשמערבבים צהוב וכחול?", answer: "ירוק", hint: "הצבע של העלים." },
+            { question: "כמה שחקנים יש בקבוצת כדורגל?", answer: "אחד עשר", hint: "עשרה ועוד אחד." },
+            { question: "באיזה חג אוכלים מצות?", answer: "פסח", hint: "חג האביב וחג החירות." },
+            { question: "מה החג הראשון בשנה העברית?", answer: "ראש השנה", hint: "אוכלים בו תפוח בדבש." },
+            { question: "מה הוא כוכב הלכת הקרוב ביותר לשמש?", answer: "כוכב חמה", hint: "הכוכב החם ביותר." },
+            { question: "כמה רגליים יש לעכביש?", answer: "שמונה", hint: "יותר מחרק רגיל." }
+        ];
+    } else {
+        fallbackQuestions = [
+            { question: "כמה יבשות יש בעולם?", answer: "שבע", hint: "אסיה, אפריקה, אמריקה הצפונית, אמריקה הדרומית, אנטארקטיקה, אירופה, ואוסטרליה." },
+            { question: "מהו כוח המושך חפצים כלפי מטה?", answer: "כוח הכבידה", hint: "כוח שמושך את התפוח מהעץ לאדמה." },
+            { question: "מי כתב את 'הארי פוטר'?", answer: "ג'יי קיי רולינג", hint: "סופרת בריטית." },
+            { question: "מהו החומר הנפוץ ביותר בקרום כדור הארץ?", answer: "חמצן", hint: "גז שאנחנו נושמים." },
+            { question: "ממה עשוי היהלום?", answer: "פחמן", hint: "יסוד שנמצא גם בעיפרון." },
+            { question: "מי הייתה ראש הממשלה הראשונה של ישראל?", answer: "גולדה מאיר", hint: "האישה היחידה שכיהנה בתפקיד זה." },
+            { question: "מהי מערכת השמש החיצונית הקרובה ביותר לכדור הארץ?", answer: "פרוקסימה קנטאורי", hint: "כוכב לכת שמרוחק 4.2 שנות אור." },
+            { question: "מה קרה במלחמת ששת הימים?", answer: "ישראל כבשה את סיני, רמת הגולן, יהודה ושומרון וירושלים המזרחית", hint: "מלחמה שהתרחשה ב-1967." },
+            { question: "מה המספר האטומי של מימן?", answer: "אחד", hint: "המספר הראשון." },
+            { question: "מה שמו של הים המלוח ביותר בעולם?", answer: "ים המלח", hint: "נמצא בישראל ובירדן." },
+            { question: "איזה אלמנט הוא הנפוץ ביותר ביקום?", answer: "מימן", hint: "החומר שממנו עשויים כוכבים." },
+            { question: "מי היה מנהיג תנועת אי-האלימות בהודו?", answer: "מהטמה גנדי", hint: "הוביל את מאבק העצמאות של הודו." }
+        ];
+    }
+    
+    return fallbackQuestions.slice(0, count);
 } 

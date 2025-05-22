@@ -3,8 +3,8 @@
 
     exports.handler = async function(event, context) {
         const { GEMINI_API_KEY } = process.env; // Access the API key from Netlify's environment variables
-        // Updated API URL to use gemini-2.0-flash model instead of gemini-pro
-        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=';
+        // Updated API URL to use gemini-1.5-flash model which is more widely available and reliable
+        const GEMINI_API_BASE_URL = 'https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=';
 
         // Get count from query parameters
         const count = event.queryStringParameters && event.queryStringParameters.count
@@ -18,9 +18,10 @@
 
         if (!GEMINI_API_KEY) {
             console.error("Gemini API Key is not set in environment variables.");
+            // Return fallback questions instead of an error
             return {
-                statusCode: 500,
-                body: JSON.stringify({ error: "API Key not configured on the server." }),
+                statusCode: 200,
+                body: getFallbackQuestions(ageGroup, count),
                 headers: { 'Content-Type': 'application/json' },
             };
         }
@@ -178,14 +179,18 @@ FORMAT REQUIREMENTS:
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody),
+                // Add timeout to prevent long-running requests
+                timeout: 25000 // 25 second timeout
             });
 
             if (!response.ok) {
                 const errorBodyText = await response.text();
                 console.error('Gemini API request failed:', response.status, errorBodyText);
+                
+                // Return fallback questions instead of an error
                 return {
-                    statusCode: response.status,
-                    body: JSON.stringify({ error: `Gemini API request failed: ${response.status}`, details: errorBodyText }),
+                    statusCode: 200,
+                    body: getFallbackQuestions(ageGroup, count),
                     headers: { 'Content-Type': 'application/json' },
                 };
             }
@@ -198,9 +203,11 @@ FORMAT REQUIREMENTS:
                 questionsJsonString = data.candidates[0].content.parts[0].text;
             } else {
                 console.error("Unexpected Gemini API response structure:", JSON.stringify(data, null, 2));
+                
+                // Return fallback questions
                 return {
-                    statusCode: 500,
-                    body: JSON.stringify({ error: "Could not extract questions string from Gemini API response." }),
+                    statusCode: 200,
+                    body: getFallbackQuestions(ageGroup, count),
                     headers: { 'Content-Type': 'application/json' },
                 };
             }
@@ -211,20 +218,93 @@ FORMAT REQUIREMENTS:
             // Log that we received a successful response
             console.log(`Successfully generated ${count} questions for age group ${ageGroup}`);
 
-            // The questionsJsonString should be the JSON array itself.
-            // The client-side will parse this.
-            return {
-                statusCode: 200,
-                headers: { 'Content-Type': 'application/json' },
-                body: questionsJsonString, // Send the string directly
-            };
+            try {
+                // Parse the JSON string to validate it
+                const parsedQuestions = JSON.parse(questionsJsonString);
+                if (!Array.isArray(parsedQuestions)) {
+                    throw new Error("Response is not a valid array");
+                }
+                
+                // Return the valid JSON string
+                return {
+                    statusCode: 200,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: questionsJsonString, // Send the string directly
+                };
+            } catch (parseError) {
+                console.error("Failed to parse Gemini API response as JSON:", parseError, "Raw response:", questionsJsonString);
+                
+                // Return fallback questions
+                return {
+                    statusCode: 200,
+                    body: getFallbackQuestions(ageGroup, count),
+                    headers: { 'Content-Type': 'application/json' },
+                };
+            }
 
         } catch (error) {
             console.error('Error in Netlify function while fetching from Gemini API:', error);
+            
+            // Return fallback questions instead of an error
             return {
-                statusCode: 500,
-                body: JSON.stringify({ error: 'Failed to fetch questions due to a server error.', details: error.message }),
+                statusCode: 200,
+                body: getFallbackQuestions(ageGroup, count),
                 headers: { 'Content-Type': 'application/json' },
             };
         }
     };
+
+    // Function to get fallback questions based on age group
+    function getFallbackQuestions(ageGroup, count) {
+        let fallbackQuestions = [];
+        
+        if (ageGroup === "5-6") {
+            fallbackQuestions = [
+                { question: "איזו חיה אומרת 'מיאו'?", answer: "חתול", hint: "חיית מחמד פופולרית." },
+                { question: "איזה צבע השמיים ביום בהיר?", answer: "כחול", hint: "צבע חשוב בדגל ישראל." },
+                { question: "מה האות הראשונה בא-ב?", answer: "א", hint: "האות הראשונה באלפבית." },
+                { question: "איזה צבע העגבנייה הבשלה?", answer: "אדום", hint: "הצבע של אש." },
+                { question: "איזו חיה אוהבת לאכול גזר?", answer: "ארנב", hint: "חיה עם אוזניים ארוכות." },
+                { question: "כמה ימים יש בשבוע?", answer: "שבעה", hint: "אחרי שישה מגיע..." },
+                { question: "איזה חג מדליקים בו נרות במשך שמונה ימים?", answer: "חנוכה", hint: "חוגגים בחורף עם סופגניות." },
+                { question: "איזו חיה היא מלכת החיות?", answer: "אריה", hint: "חיה עם רעמה גדולה." },
+                { question: "איזה פרי צהוב וארוך?", answer: "בננה", hint: "קוף אוהב לאכול אותו." },
+                { question: "מה הצבע של העשב?", answer: "ירוק", hint: "הצבע של העלים בעצים." },
+                { question: "מאיזה צבע הלימון?", answer: "צהוב", hint: "הצבע של השמש." },
+                { question: "איזו חיה נותנת לנו חלב?", answer: "פרה", hint: "חיה שאומרת מו." }
+            ];
+        } else if (ageGroup === "7-8") {
+            fallbackQuestions = [
+                { question: "מה בירת צרפת?", answer: "פריז", hint: "יש בה מגדל מפורסם." },
+                { question: "איזו חיה היא מלך החיות?", answer: "אריה", hint: "יש לו רעמה גדולה." },
+                { question: "כמה צבעים יש בקשת?", answer: "שבעה", hint: "כמו מספר ימי השבוע." },
+                { question: "מה שם ההר הגבוה בעולם?", answer: "אוורסט", hint: "נמצא בהימלאיה." },
+                { question: "איזו חיה יש לה החדק הכי ארוך?", answer: "פיל", hint: "החיה היבשתית הגדולה ביותר." },
+                { question: "באיזה חג מתחפשים?", answer: "פורים", hint: "אוכלים בו אוזני המן." },
+                { question: "מה הצבע שמתקבל כשמערבבים צהוב וכחול?", answer: "ירוק", hint: "הצבע של העלים." },
+                { question: "כמה שחקנים יש בקבוצת כדורגל?", answer: "אחד עשר", hint: "עשרה ועוד אחד." },
+                { question: "באיזה חג אוכלים מצות?", answer: "פסח", hint: "חג האביב וחג החירות." },
+                { question: "מה החג הראשון בשנה העברית?", answer: "ראש השנה", hint: "אוכלים בו תפוח בדבש." },
+                { question: "מה הוא כוכב הלכת הקרוב ביותר לשמש?", answer: "כוכב חמה", hint: "הכוכב החם ביותר." },
+                { question: "כמה רגליים יש לעכביש?", answer: "שמונה", hint: "יותר מחרק רגיל." }
+            ];
+        } else {
+            fallbackQuestions = [
+                { question: "כמה יבשות יש בעולם?", answer: "שבע", hint: "אסיה, אפריקה, אמריקה הצפונית, אמריקה הדרומית, אנטארקטיקה, אירופה, ואוסטרליה." },
+                { question: "מהו כוח המושך חפצים כלפי מטה?", answer: "כוח הכבידה", hint: "כוח שמושך את התפוח מהעץ לאדמה." },
+                { question: "מי כתב את 'הארי פוטר'?", answer: "ג'יי קיי רולינג", hint: "סופרת בריטית." },
+                { question: "מהו החומר הנפוץ ביותר בקרום כדור הארץ?", answer: "חמצן", hint: "גז שאנחנו נושמים." },
+                { question: "ממה עשוי היהלום?", answer: "פחמן", hint: "יסוד שנמצא גם בעיפרון." },
+                { question: "מי הייתה ראש הממשלה הראשונה של ישראל?", answer: "גולדה מאיר", hint: "האישה היחידה שכיהנה בתפקיד זה." },
+                { question: "מהי מערכת השמש החיצונית הקרובה ביותר לכדור הארץ?", answer: "פרוקסימה קנטאורי", hint: "כוכב לכת שמרוחק 4.2 שנות אור." },
+                { question: "מה קרה במלחמת ששת הימים?", answer: "ישראל כבשה את סיני, רמת הגולן, יהודה ושומרון וירושלים המזרחית", hint: "מלחמה שהתרחשה ב-1967." },
+                { question: "מה המספר האטומי של מימן?", answer: "אחד", hint: "המספר הראשון." },
+                { question: "מה שמו של הים המלוח ביותר בעולם?", answer: "ים המלח", hint: "נמצא בישראל ובירדן." },
+                { question: "איזה אלמנט הוא הנפוץ ביותר ביקום?", answer: "מימן", hint: "החומר שממנו עשויים כוכבים." },
+                { question: "מי היה מנהיג תנועת אי-האלימות בהודו?", answer: "מהטמה גנדי", hint: "הוביל את מאבק העצמאות של הודו." }
+            ];
+        }
+        
+        // Ensure we return the requested count of questions (or all available if less)
+        return JSON.stringify(fallbackQuestions.slice(0, count));
+    }
