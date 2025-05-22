@@ -256,6 +256,9 @@ JSON FORMAT EXAMPLE:
                     console.log(`Successfully generated ${count} questions using ${model} for age group ${ageGroup}`);
 
                     try {
+                        // Clean and repair potentially malformed JSON
+                        questionsJsonString = cleanAndRepairJson(questionsJsonString);
+                        
                         // Parse the JSON string to validate it
                         const parsedQuestions = JSON.parse(questionsJsonString);
                         if (!Array.isArray(parsedQuestions)) {
@@ -425,4 +428,111 @@ JSON FORMAT EXAMPLE:
         });
         
         return JSON.stringify(shuffled.slice(0, count));
+    }
+
+    // Function to clean and repair malformed JSON
+    function cleanAndRepairJson(jsonString) {
+        if (!jsonString) return '[]';
+        
+        // Helpful debug if needed
+        // console.log("Original JSON string:", JSON.stringify(jsonString.substring(0, 500)));
+        
+        try {
+            // Common patterns from Gemini API that break JSON
+            // 1. Fix missing double quotes in field names
+            jsonString = jsonString.replace(/{\s*([a-zA-Z0-9_]+)\s*:/g, '{"$1":');
+            
+            // 2. Fix missing commas between objects in arrays
+            jsonString = jsonString.replace(/}\s*{/g, '},{');
+            
+            // 3. Fix unterminated strings (harder to detect, but attempt with common patterns)
+            // Find lines with odd number of quotes which might indicate unterminated strings
+            const lines = jsonString.split('\n');
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                // Count quotes in this line
+                const quoteCount = (line.match(/"/g) || []).length;
+                
+                // If odd number of quotes and not the last line
+                if (quoteCount % 2 === 1 && i < lines.length - 1) {
+                    // Add a closing quote at the end of the line
+                    lines[i] = line + '"';
+                }
+            }
+            jsonString = lines.join('\n');
+            
+            // 4. Replace Hebrew quotes with standard quotes
+            jsonString = jsonString.replace(/[״""]/g, '"');
+            
+            // 5. Fix issue with trailing commas in arrays
+            jsonString = jsonString.replace(/,\s*]/g, ']');
+            
+            // 6. Fix escaped quotes within strings
+            // First capture existing properly escaped quotes
+            jsonString = jsonString.replace(/\\"/g, '__ESCAPED_QUOTE__');
+            // Fix unescaped quotes inside strings 
+            const fixQuotesInString = (str) => {
+                let inString = false;
+                let result = '';
+                for (let i = 0; i < str.length; i++) {
+                    const char = str[i];
+                    if (char === '"' && (i === 0 || str[i-1] !== '\\')) {
+                        inString = !inString;
+                    }
+                    
+                    // If we're in a string and encounter an unescaped quote
+                    if (inString && char === '"' && i > 0 && str[i-1] !== '\\' && i < str.length - 1) {
+                        result += '\\"';
+                    } else {
+                        result += char;
+                    }
+                }
+                return result;
+            };
+            jsonString = fixQuotesInString(jsonString);
+            
+            // Restore the properly escaped quotes
+            jsonString = jsonString.replace(/__ESCAPED_QUOTE__/g, '\\"');
+            
+            // 7. Make sure the string starts with [ and ends with ]
+            if (!jsonString.trim().startsWith('[')) {
+                jsonString = '[' + jsonString.trim();
+            }
+            if (!jsonString.trim().endsWith(']')) {
+                jsonString = jsonString.trim() + ']';
+            }
+            
+            // 8. Try to make it a valid array if all else fails
+            try {
+                JSON.parse(jsonString);
+            } catch (e) {
+                // If parsing still fails, try to extract objects from the text
+                const objects = [];
+                const regex = /{[^{}]*}/g;
+                let match;
+                while ((match = regex.exec(jsonString)) !== null) {
+                    try {
+                        const obj = JSON.parse(match[0]);
+                        if (obj.question && obj.answer) {
+                            objects.push(obj);
+                        }
+                    } catch (objError) {
+                        // Skip invalid objects
+                    }
+                }
+                
+                if (objects.length > 0) {
+                    return JSON.stringify(objects);
+                }
+                
+                // Last resort - return empty array to prevent crashing
+                console.error("Could not repair JSON, using empty array");
+                return '[]';
+            }
+            
+            return jsonString;
+        } catch (e) {
+            console.error("Error in JSON repair:", e);
+            return '[]';
+        }
     }
